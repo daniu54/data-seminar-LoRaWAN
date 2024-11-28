@@ -110,10 +110,10 @@ def svr_test_bed(data: pd.DataFrame, test_specification: pd.DataFrame):
         
         try:
             with open(output_file, "x") as f:
-                test.to_csv(f, index=False)
+                pd.DataFrame(test).to_csv(f, index=False)
         except FileExistsError:
             with open(output_file, "a") as f:
-                test.to_csv(f, header=False, index=False) 
+                pd.DataFrame(test).to_csv(f, header=False, index=False) 
 
     test_end = time.time()
     print(f"Test took {time.strftime('%H:%M:%S', time.gmtime(test_end - test_start))}")
