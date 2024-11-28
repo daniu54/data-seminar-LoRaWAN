@@ -1,3 +1,4 @@
+import os
 import numpy as np
 
 # models
@@ -17,6 +18,10 @@ def svr_test_bed(data: pd.DataFrame, test_specification: pd.DataFrame):
 
     test_data = test_specification.copy()
     test_data['method'] = "SVR"
+
+    # move columns id and method to the front for readability
+    test_data.insert(0, 'id', test_data.pop('id'))
+    test_data.insert(1, 'method', test_data.pop('method'))
 
     test_start = time.time()
 
@@ -105,19 +110,18 @@ def svr_test_bed(data: pd.DataFrame, test_specification: pd.DataFrame):
             best_r2 = r2
             best_id = test['id']
         
+        # save test results
+        os.makedirs(os.path.dirname(output_file), exist_ok=True)
         try:
             with open(output_file, "x") as f:
-                pd.DataFrame(test).to_csv(f, index=False)
+                test_data.loc[[index]].to_csv(f, index=False)
         except FileExistsError:
             with open(output_file, "a") as f:
-                pd.DataFrame(test).to_csv(f, header=False, index=False) 
+                test_data.loc[[index]].to_csv(f, header=False, index=False) 
 
     test_end = time.time()
+
     print(f"Test took {time.strftime('%H:%M:%S', time.gmtime(test_end - test_start))}")
     print("Best model id: ", best_id, " with r2: ", best_r2)
-
-    # move columns id and method to the front for readability
-    test_data.insert(0, 'id', test_data.pop('id'))
-    test_data.insert(1, 'method', test_data.pop('method'))
 
     return (test_data, best_model, best_id)
