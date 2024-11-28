@@ -12,9 +12,6 @@ from sklearn.metrics import mean_squared_error, r2_score
 import pandas as pd
 import time
 
-def test():
-    print("Hello from svr_test_bed")
-
 def svr_test_bed(data: pd.DataFrame, test_specification: pd.DataFrame):
     method = "SVR"
 
