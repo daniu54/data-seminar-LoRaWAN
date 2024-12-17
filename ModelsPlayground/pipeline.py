@@ -257,31 +257,31 @@ def test_models(
         results.at[index, "mse_diff_train_test"] = r2_train - r2
 
         # cross-validation
+        folds = 5
         print(
-            f"Calculation of cross validation metrics for model {model} for test size {len(x_test)} (test_size={test_size}) started at {current_timestamp}"
+            f"Calculation of cross validation with {folds} folds metrics for model {model} for test size {len(x_test)} (test_size={test_size}) started at {current_timestamp}"
         )
+
         cv_mse = -cross_val_score(
-            model, x_train, y_train, cv=5, scoring="neg_mean_squared_error"
+            model, x_train, y_train, cv=folds, scoring="neg_mean_squared_error"
         )
-        cv_r2 = cross_val_score(model, x_train, y_train, cv=5, scoring="r2")
+        cv_r2 = cross_val_score(model, x_train, y_train, cv=folds, scoring="r2")
 
-        if "cross_val_mse" not in results:
-            results["cross_val_mse"] = np.NaN
-            results["cross_val_mse"] = results["cross_val_mse"].astype(
-                object
-            )  # need to tell pandas that we will be storing lists here
+        cross_val_mse_column = f"cross_val_mse_cv{folds}"
+        cross_val_r2_column = f"cross_val_r2_cv{folds}"
 
-        if "cross_val_r2" not in results:
-            results["cross_val_r2"] = np.NaN
-            results["cross_val_r2"] = results["cross_val_mse"].astype(
-                object
-            )  # need to tell pandas that we will be storing lists here
+        for column in [cross_val_mse_column, cross_val_r2_column]:
+            if column not in results:
+                results[column] = np.NaN
+                results[column] = results[column].astype(
+                    object
+                )  # need to tell pandas that we will be storing lists here
 
-        results.at[index, "cross_val_mse"] = cv_mse
-        results.at[index, "cross_val_r2"] = cv_r2
+        results.at[index, cross_val_mse_column] = cv_mse
+        results.at[index, cross_val_r2_column] = cv_r2
 
-        results.at[index, "cross_val_mse_mean"] = cv_mse.mean()
-        results.at[index, "cross_val_r2_mean"] = cv_r2.mean()
+        results.at[index, cross_val_mse_column + "_mean"] = cv_mse.mean()
+        results.at[index, cross_val_r2_column + "_mean"] = cv_r2.mean()
 
         # save the model to a file if needed
         if not pd.isna(save_model) and save_model:
