@@ -32,7 +32,7 @@ DEFAULT_FEATURES = [
     "temperature",
     "snr",
 ]
-DEFAULT_STATS_FILE = "results/stats.csv"
+DEFAULT_STATS_FILE = "results/stats.json"
 
 
 def load_model(test_specification_row: pd.Series):
@@ -303,10 +303,10 @@ def test_models(
         try:
             print(f"Saving model stats to {stats_file}")
             with open(stats_file, "x") as f:
-                results.loc[[index]].to_csv(f, index=False)
+                results.loc[[index]].to_json(f, orient='records', lines=True)
         except FileExistsError:
             with open(stats_file, "a") as f:
-                results.loc[[index]].to_csv(f, header=False, index=False)
+                results.loc[[index]].to_json(f, orient='records', lines=True)
 
         print(
             f"Test {index + 1} of {len(test_specifications)} with id {id} ended at {pd.Timestamp.now()}"
