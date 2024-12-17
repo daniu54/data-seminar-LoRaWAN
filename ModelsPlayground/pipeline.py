@@ -201,6 +201,9 @@ def test_models(
             print(f"Using provided model {model}")
             pass
 
+        if hasattr(model, "random_state"):
+            model.set_params(random_state=random_state)
+
         data_sampled = data.sample(n=int(sample_size), random_state=random_state)
 
         x = data_sampled[features]
