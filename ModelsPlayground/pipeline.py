@@ -1,3 +1,5 @@
+from typing import Union, Callable
+
 import os
 import numpy as np
 
@@ -52,7 +54,7 @@ def new_test_specification(model):
 def get_model_file_name(test_specification: pd.Series):
     return f"models/{test_specification['id']}.joblib"
 
-def set_defaults_for_column(test_specifications: pd.DataFrame, column: str, default: callable | object = np.NaN):
+def set_defaults_for_column(test_specifications: pd.DataFrame, column: str, default: Union[Callable, object] = np.NaN):
     """
     Set default values for a column in test specifications.
     The default is a callable or an object that generates the value for a given row index and row.
