@@ -239,6 +239,7 @@ def test_models(
         r2 = r2_score(y_test, y_test_pred)
 
         # save results
+        results.at[index, "model"] = str(model)
         results.at[index, "model_type"] = model.__class__.__name__
         results.at[index, "time_fitting"] = str(timedelta(seconds=time_fitting))
         results.at[index, "time_pred"] = str(timedelta(seconds=time_pred))
