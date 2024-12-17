@@ -297,7 +297,7 @@ def test_models(
         results.at[index, cross_val_mse_column + "_mean"] = cv_mse.mean()
         results.at[index, cross_val_r2_column + "_mean"] = cv_r2.mean()
 
-        results.at[index, cross_val_colum_prefix + "_time"] = str(
+        results.at[index, "time_" + cross_val_colum_prefix] = str(
             timedelta(seconds=cross_val_time)
         )
 
