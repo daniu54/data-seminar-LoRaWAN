@@ -94,7 +94,7 @@ def set_defaults_for_column(
             default_value = default() if callable(default) else default
 
             # lists and dicts may be interpreted incorrectly by pandas, so we need to explicitly specify the column dtype as object
-            # additionally, we correct string columns to correct string dtype
+            # additionally, we correct string and bool columns to correct dtypes
             # only do it at the first iteration to avoid unnecessary overhead
             if index == 0:
                 if isinstance(default_value, (list, dict)):
@@ -104,6 +104,10 @@ def set_defaults_for_column(
                 if isinstance(default_value, (str)):
                     test_specifications[column] = test_specifications[column].astype(
                         "string"
+                    )
+                if isinstance(default_value, (bool)):
+                    test_specifications[column] = test_specifications[column].astype(
+                        "bool"
                     )
 
             test_specifications.at[index, column] = default_value
