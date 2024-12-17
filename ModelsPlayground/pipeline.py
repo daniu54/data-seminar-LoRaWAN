@@ -10,8 +10,7 @@ from scipy.optimize import curve_fit  # multip. linear regression
 from sklearn.svm import SVR  # support vector forrest
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.neural_network import MLPRegressor
-
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import mean_squared_error, r2_score
 
 from datetime import timedelta
@@ -216,14 +215,14 @@ def test_models(
         start_time = time.time()
 
         print(
-            f"Fitting model {model} for train size {len(x_train)} started at {current_timestamp}"
+            f"Fitting model {model} for train size {len(x_test)} (test_size={test_size}) started at {current_timestamp}"
         )
         start_time = time.time()
         model.fit(x_train, y_train)
         time_fitting = time.time() - start_time
 
         print(
-            f"Predicting model {model} for test size {len(x_test)} started at {current_timestamp}"
+            f"Predicting model {model} for test size {len(x_test)} (test_size={test_size}) started at {current_timestamp}"
         )
         start_time = time.time()
         y_test_pred = model.predict(x_test)
@@ -238,18 +237,47 @@ def test_models(
         results.at[index, "time_pred"] = str(timedelta(seconds=time_pred))
         results.at[index, "mse"] = mse
         results.at[index, "r2"] = r2
-        results.at[index, "mse_train"] = mse_train
-        results.at[index, "r2_train"] = r2_train
         results.at[index, "model_parameters"] = model.get_params()
 
         # overfitting analysis
+        print(
+            f"Calculation of overfitting metrics for model {model} for test size {len(x_test)} (test_size={test_size}) started at {current_timestamp}"
+        )
         y_train_pred = model.predict(x_train)
 
+        # performance on training data
         mse_train = mean_squared_error(y_train, y_train_pred)
         r2_train = r2_score(y_train, y_train_pred)
 
+        results.at[index, "mse_train"] = mse_train
+        results.at[index, "r2_train"] = r2_train
         results.at[index, "mse_diff_train_test"] = mse_train - mse
         results.at[index, "mse_diff_train_test"] = r2_train - r2
+
+        # cross-validation
+        print(
+            f"Calculation of cross validation metrics for model {model} for test size {len(x_test)} (test_size={test_size}) started at {current_timestamp}"
+        )
+        cv_mse = -cross_val_score(model, x_train, y_train, cv=5, scoring='neg_mean_squared_error')
+        cv_r2 = cross_val_score(model, x_train, y_train, cv=5, scoring='r2')
+
+        if "cross_val_mse" not in results:
+            results["cross_val_mse"] = np.NaN
+            results["cross_val_mse"] = results["cross_val_mse"].astype(
+                object
+            )  # need to tell pandas that we will be storing lists here
+
+        if "cross_val_r2" not in results:
+            results["cross_val_r2"] = np.NaN
+            results["cross_val_r2"] = results["cross_val_mse"].astype(
+                object
+            )  # need to tell pandas that we will be storing lists here
+
+        results.at[index, "cross_val_mse"] = cv_mse
+        results.at[index, "cross_val_r2"] = cv_r2
+
+        results.at[index, "cross_val_mse_mean"] = cv_mse.mean()
+        results.at[index, "cross_val_r2_mean"] = cv_r2.mean()
 
         # save the model to a file if needed
         if not pd.isna(save_model) and save_model:
@@ -267,6 +295,10 @@ def test_models(
         except FileExistsError:
             with open(stats_file, "a") as f:
                 results.loc[[index]].to_csv(f, header=False, index=False)
+        
+        print(
+            f"Test {index + 1} of {len(test_specifications)} with id {id} ended at {current_timestamp}"
+        )
 
     test_end = time.time()
 
