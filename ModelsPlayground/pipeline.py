@@ -246,7 +246,9 @@ def test_models(
         # save results
         results.at[index, "model"] = str(model)
         results.at[index, "model_type"] = model.__class__.__name__
-        results.at[index, "model_type_full"] = f"{model.__class__.__module__}.{model.__class__.__name__}"
+        results.at[index, "model_type_full"] = (
+            f"{model.__class__.__module__}.{model.__class__.__name__}"
+        )
         results.at[index, "time_fitting"] = str(timedelta(seconds=time_fitting))
         results.at[index, "time_pred"] = str(timedelta(seconds=time_pred))
         results.at[index, "mse"] = mse
@@ -271,19 +273,19 @@ def test_models(
         # cross-validation
         folds = 5
         print(
-            f"Calculation of cross validation metrics ({folds} folds) for model {model} for test size {len(x_test)} (test_size={test_size}) started at {pd.Timestamp.now()}"
+            f"Calculation of cross validation metrics ({folds} folds) for model {model} over whole dataset started at {pd.Timestamp.now()}"
         )
 
         start_time = time.time()
         cv_mse = -cross_val_score(
-            model, x_train, y_train, cv=folds, scoring="neg_mean_squared_error"
+            model, x, y, cv=folds, scoring="neg_mean_squared_error"
         )
-        cv_r2 = cross_val_score(model, x_train, y_train, cv=folds, scoring="r2")
+        cv_r2 = cross_val_score(model, x, y, cv=folds, scoring="r2")
         cross_val_time = time.time() - start_time
 
-        cross_val_colum_prefix = f"cross_validation{folds}"
-        cross_val_mse_column = cross_val_colum_prefix + "_mse"
-        cross_val_r2_column = cross_val_colum_prefix + "_r2"
+        cross_val_colum_name = f"cross_validation{folds}"
+        cross_val_mse_column = cross_val_colum_name + "_mse"
+        cross_val_r2_column = cross_val_colum_name + "_r2"
 
         # need to tell pandas that we will be storing lists in these columns
         for column in [cross_val_mse_column, cross_val_r2_column]:
@@ -297,7 +299,7 @@ def test_models(
         results.at[index, cross_val_mse_column + "_mean"] = cv_mse.mean()
         results.at[index, cross_val_r2_column + "_mean"] = cv_r2.mean()
 
-        results.at[index, "time_" + cross_val_colum_prefix] = str(
+        results.at[index, "time_" + cross_val_colum_name] = str(
             timedelta(seconds=cross_val_time)
         )
 
