@@ -284,7 +284,7 @@ def test_models(
         cv_r2 = cross_val_score(model, x, y, cv=folds, scoring="r2")
         cross_val_time = time.time() - start_time
 
-        cross_val_colum_name = f"cross_validation{folds}"
+        cross_val_colum_name = f"cross_validation_k{folds}"
         cross_val_mse_column = cross_val_colum_name + "_mse"
         cross_val_r2_column = cross_val_colum_name + "_r2"
 
