@@ -1,6 +1,8 @@
 from typing import Union, Callable
 
 import os
+import sys
+from io import StringIO
 import numpy as np
 
 import uuid
@@ -76,6 +78,11 @@ def new_test_specification(model):
 
 def get_model_file_name(test_specification: pd.Series):
     return f"models/{test_specification['id']}.joblib"
+
+
+def get_model_logfile_name(test_specification: pd.Series, test_end: pd.Timestamp):
+    timestamp_numeric = int(test_end.timestamp())
+    return f"models/{test_specification['id']}_{timestamp_numeric}.logs"
 
 
 def set_defaults_for_column(
@@ -196,6 +203,14 @@ def test_models(
     test_start = time.time()
 
     for index, test in test_specifications.iterrows():
+        logs_buffer = StringIO()
+        tee_stdout = TeeStdout(logs_buffer)
+        tee_stderr = TeeStderr(logs_buffer)
+
+        # capture output to a file and console
+        sys.stdout = tee_stdout
+        sys.stderr = tee_stderr
+
         id = get_value(test, "id")
         test_size = get_value(test, "test_size")
         features = get_value(test, "features")
@@ -238,6 +253,9 @@ def test_models(
 
         start_time = time.time()
         test_start_time = time.time()
+
+        results.at[index, "time_test_start"] = pd.Timestamp.now()
+        results.at[index, "time_test_start_pretty"] = str(pd.Timestamp.now())
 
         print(
             f"Fitting model {model} for train size {len(x_test)} (test_size={test_size}) started at {pd.Timestamp.now()}"
@@ -332,8 +350,11 @@ def test_models(
         results.at[index, "time_" + cross_val_mse_column] = cross_val_mse_time
         results.at[index, "time_" + cross_val_r2_column] = cross_val_r2_time
 
-        results.at[index, "date_ran"] = str(pd.Timestamp.now())
-        results.at[index, "time_test_run"] = str(
+        test_end = pd.Timestamp.now()
+
+        results.at[index, "time_test_end"] = test_end
+        results.at[index, "time_test_end_pretty"] = str(pd.Timestamp.now())
+        results.at[index, "time_test_duration"] = str(
             timedelta(seconds=time.time() - test_start_time)
         )
 
@@ -358,6 +379,16 @@ def test_models(
             f"Test {index + 1} of {len(test_specifications)} with id {id} ended at {pd.Timestamp.now()}"
         )
 
+        # Reset original stdout and stderr
+        sys.stdout = tee_stdout.stdout
+        sys.stderr = tee_stderr.stderr
+
+        # Write logs to a file
+        with open(get_model_logfile_name(test, test_end), "w") as f:
+            f.write(logs_buffer.getvalue())
+
+        logs_buffer.close()
+
     test_end = time.time()
 
     print(
@@ -365,3 +396,30 @@ def test_models(
     )
 
     return results
+
+
+class TeeStdout:  # used to capture stdout and write it to a file
+    def __init__(self, string_buffer: StringIO):
+        self.stdout = sys.stdout
+        self.buffer = string_buffer
+
+    def write(self, data):
+        # write to both console and the file
+        self.buffer.write(data)
+        self.stdout.write(data)
+
+    def flush(self):
+        self.stdout.flush()
+
+
+class TeeStderr:  # used to capture stdout and write it to a file
+    def __init__(self, string_buffer: StringIO):
+        self.stderr = sys.stderr
+        self.buffer = string_buffer
+
+    def write(self, data):
+        self.buffer.write(data)
+        self.stderr.write(data)
+
+    def flush(self):
+        self.stderr.flush()
