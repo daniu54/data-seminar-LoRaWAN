@@ -22,6 +22,8 @@ import joblib  # for persisting models
 
 from enum import Enum
 
+from pathlib import Path
+
 DEFAULT_FEATURES = [
     "distance",
     "c_walls",
@@ -33,7 +35,7 @@ DEFAULT_FEATURES = [
     "snr",
 ]
 
-DEFAULT_STATS_FILE = "results/model_stats.json"
+DEFAULT_STATS_FILE = Path("./results/model_stats.json")
 
 def load_model(test_specification_row: pd.Series):
     """
@@ -159,6 +161,8 @@ def test_models(
         data (pd.DataFrame): Data to test models on
         test_specifications (pd.DataFrame | list[object]): Test specifications for models, can be a DataFrame or a list of objects (for expected structure see new_test_specification)
     """
+
+    stats_file = Path(stats_file)
 
     if isinstance(test_specifications, list):
         test_specifications = pd.DataFrame(test_specifications)
