@@ -69,6 +69,7 @@ def new_test_specification(model):
         "features": None,  # array of column names from data, default: use DEFAULT_FEATURES
         "save_model": False,  # whether the model should be saved, default: False
         "random_state": None,  # used in data.sample and train_test_split, default: None
+        "verbose": 0,  # whether to print verbose output from all functions that accept it, default: 0, no verbose output
     }
 
 
@@ -131,6 +132,7 @@ def set_defaults_where_needed(test_specifications: pd.DataFrame, data: pd.DataFr
     set_defaults_for_column(test_specifications, "save_model", default=False)
     set_defaults_for_column(test_specifications, "test_size", default=0.25)
     set_defaults_for_column(test_specifications, "random_state")
+    set_defaults_for_column(test_specifications, "verbose", default=0)
 
 
 def get_value(test_specification: pd.Series, column: str):
@@ -198,6 +200,7 @@ def test_models(
         random_state = get_value(test, "random_state")
         sample_size = get_value(test, "sample_size")
         save_model = get_value(test, "save_model")
+        verbose = int(get_value(test, "verbose"))
 
         model = test["model"]
 
@@ -210,6 +213,9 @@ def test_models(
 
         if hasattr(model, "random_state"):
             model.set_params(random_state=random_state)
+
+        if hasattr(model, "verbose"):
+            model.set_params(verbose=verbose)
 
         data_sampled = data.sample(n=int(sample_size), random_state=random_state)
 
@@ -282,14 +288,14 @@ def test_models(
         )
         start_time = time.time()
         cv_mse = -cross_val_score(
-            model, x, y, cv=folds, scoring="neg_mean_squared_error"
+            model, x, y, cv=folds, scoring="neg_mean_squared_error", verbose=verbose
         )
         cross_val_mse_time = str(timedelta(seconds=time.time() - start_time))
         print(f"Calculation of cross validation for mse took {cross_val_mse_time}")
 
         print(f"Calculation of cross validation for r2 started at {pd.Timestamp.now()}")
         start_time = time.time()
-        cv_r2 = cross_val_score(model, x, y, cv=folds, scoring="r2")
+        cv_r2 = cross_val_score(model, x, y, cv=folds, scoring="r2", verbose=verbose)
         cross_val_r2_time = str(timedelta(seconds=time.time() - start_time))
         print(f"Calculation of cross validation for r2 took {cross_val_r2_time}")
 
