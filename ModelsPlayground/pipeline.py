@@ -194,8 +194,6 @@ def test_models(
         sample_size = get_value(test, "sample_size")
         save_model = get_value(test, "save_model")
 
-        current_timestamp = pd.Timestamp.now()
-
         model = test["model"]
 
         if isinstance(model, str):
@@ -214,7 +212,7 @@ def test_models(
         y = data_sampled["exp_pl"]
 
         print(
-            f"Test {index + 1} of {len(test_specifications)} with id {id} started at {current_timestamp}"
+            f"Test {index + 1} of {len(test_specifications)} with id {id} started at {pd.Timestamp.now()}"
         )
 
         x_train, x_test, y_train, y_test = train_test_split(
@@ -224,14 +222,14 @@ def test_models(
         start_time = time.time()
 
         print(
-            f"Fitting model {model} for train size {len(x_test)} (test_size={test_size}) started at {current_timestamp}"
+            f"Fitting model {model} for train size {len(x_test)} (test_size={test_size}) started at {pd.Timestamp.now()}"
         )
         start_time = time.time()
         model.fit(x_train, y_train)
         time_fitting = time.time() - start_time
 
         print(
-            f"Predicting model {model} for test size {len(x_test)} (test_size={test_size}) started at {current_timestamp}"
+            f"Predicting model {model} for test size {len(x_test)} (test_size={test_size}) started at {pd.Timestamp.now()}"
         )
         start_time = time.time()
         y_test_pred = model.predict(x_test)
@@ -242,7 +240,6 @@ def test_models(
 
         # save results
         results.at[index, "model_type"] = model.__class__.__name__
-        results.at[index, "date_ran"] = current_timestamp
         results.at[index, "time_fitting"] = str(timedelta(seconds=time_fitting))
         results.at[index, "time_pred"] = str(timedelta(seconds=time_pred))
         results.at[index, "mse"] = mse
@@ -251,7 +248,7 @@ def test_models(
 
         # overfitting analysis
         print(
-            f"Calculation of overfitting metrics for model {model} for test size {len(x_test)} (test_size={test_size}) started at {current_timestamp}"
+            f"Calculation of overfitting metrics for model {model} for test size {len(x_test)} (test_size={test_size}) started at {pd.Timestamp.now()}"
         )
         y_train_pred = model.predict(x_train)
 
@@ -267,7 +264,7 @@ def test_models(
         # cross-validation
         folds = 5
         print(
-            f"Calculation of cross validation metrics ({folds} folds) for model {model} for test size {len(x_test)} (test_size={test_size}) started at {current_timestamp}"
+            f"Calculation of cross validation metrics ({folds} folds) for model {model} for test size {len(x_test)} (test_size={test_size}) started at {pd.Timestamp.now()}"
         )
 
         cv_mse = -cross_val_score(
@@ -278,18 +275,21 @@ def test_models(
         cross_val_mse_column = f"cross_val_mse_cv{folds}"
         cross_val_r2_column = f"cross_val_r2_cv{folds}"
 
+        # need to tell pandas that we will be storing lists in these columns
         for column in [cross_val_mse_column, cross_val_r2_column]:
             if column not in results:
                 results[column] = np.NaN
                 results[column] = results[column].astype(
                     object
-                )  # need to tell pandas that we will be storing lists here
+                )
 
         results.at[index, cross_val_mse_column] = cv_mse
         results.at[index, cross_val_r2_column] = cv_r2
 
         results.at[index, cross_val_mse_column + "_mean"] = cv_mse.mean()
         results.at[index, cross_val_r2_column + "_mean"] = cv_r2.mean()
+
+        results.at[index, "date_ran"] = pd.Timestamp.now()
 
         # save the model to a file if needed
         if not pd.isna(save_model) and save_model:
@@ -309,7 +309,7 @@ def test_models(
                 results.loc[[index]].to_csv(f, header=False, index=False)
 
         print(
-            f"Test {index + 1} of {len(test_specifications)} with id {id} ended at {current_timestamp}"
+            f"Test {index + 1} of {len(test_specifications)} with id {id} ended at {pd.Timestamp.now()}"
         )
 
     test_end = time.time()
