@@ -317,7 +317,8 @@ def test_models(
             y,
             cv=folds,
             scoring="neg_mean_squared_error",
-            n_jobs=n_jobs,
+            # n_jobs cause google colab workers to hang for some values
+            # n_jobs=n_jobs,
             verbose=verbose,
         )
         cross_val_mse_time = str(timedelta(seconds=time.time() - start_time))
@@ -326,7 +327,14 @@ def test_models(
         print(f"Calculation of cross validation for r2 started at {pd.Timestamp.now()}")
         start_time = time.time()
         cv_r2 = cross_val_score(
-            model, x, y, cv=folds, scoring="r2", n_jobs=n_jobs, verbose=verbose
+            model,
+            x,
+            y,
+            cv=folds,
+            scoring="r2",
+            # n_jobs cause google colab workers to hang for some values
+            # n_jobs=n_jobs,
+            verbose=verbose,
         )
         cross_val_r2_time = str(timedelta(seconds=time.time() - start_time))
         print(f"Calculation of cross validation for r2 took {cross_val_r2_time}")
