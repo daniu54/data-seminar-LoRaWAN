@@ -43,7 +43,7 @@ def load_model(test_specification_row: pd.Series):
     model_file = test_specification_row["model"]
 
     assert not pd.isna(model_file), "'model' is not defined in test specification row"
-    assert not isinstance(
+    assert isinstance(
         model_file, str
     ), f"expected 'model' to be a string, instead got {model_file}"
 
@@ -259,7 +259,7 @@ def test_models(
         # cross-validation
         folds = 5
         print(
-            f"Calculation of cross validation with {folds} folds metrics for model {model} for test size {len(x_test)} (test_size={test_size}) started at {current_timestamp}"
+            f"Calculation of cross validation ({folds} folds) metrics for model {model} for test size {len(x_test)} (test_size={test_size}) started at {current_timestamp}"
         )
 
         cv_mse = -cross_val_score(
