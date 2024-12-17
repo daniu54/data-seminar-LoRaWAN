@@ -37,6 +37,7 @@ DEFAULT_FEATURES = [
 
 DEFAULT_STATS_FILE = Path("./results/model_stats.json")
 
+
 def load_model(test_specification_row: pd.Series):
     """
     Load a model from a file and set the model arguments.
@@ -272,21 +273,22 @@ def test_models(
             f"Calculation of cross validation metrics ({folds} folds) for model {model} for test size {len(x_test)} (test_size={test_size}) started at {pd.Timestamp.now()}"
         )
 
+        start_time = time.time()
         cv_mse = -cross_val_score(
             model, x_train, y_train, cv=folds, scoring="neg_mean_squared_error"
         )
         cv_r2 = cross_val_score(model, x_train, y_train, cv=folds, scoring="r2")
+        cross_val_time = time.time() - start_time
 
-        cross_val_mse_column = f"cross_val_mse_cv{folds}"
-        cross_val_r2_column = f"cross_val_r2_cv{folds}"
+        cross_val_colum_prefix = f"cross_validation{folds}"
+        cross_val_mse_column = cross_val_colum_prefix + "_mse"
+        cross_val_r2_column = cross_val_colum_prefix + "_r2"
 
         # need to tell pandas that we will be storing lists in these columns
         for column in [cross_val_mse_column, cross_val_r2_column]:
             if column not in results:
                 results[column] = np.NaN
-                results[column] = results[column].astype(
-                    object
-                )
+                results[column] = results[column].astype(object)
 
         results.at[index, cross_val_mse_column] = cv_mse
         results.at[index, cross_val_r2_column] = cv_r2
@@ -294,7 +296,11 @@ def test_models(
         results.at[index, cross_val_mse_column + "_mean"] = cv_mse.mean()
         results.at[index, cross_val_r2_column + "_mean"] = cv_r2.mean()
 
-        results.at[index, "date_ran"] = pd.Timestamp.now()
+        results.at[index, cross_val_colum_prefix + "_time"] = str(
+            timedelta(seconds=cross_val_time)
+        )
+
+        results.at[index, "date_ran"] = str(pd.Timestamp.now())
 
         # save the model to a file if needed
         if not pd.isna(save_model) and save_model:
@@ -308,10 +314,10 @@ def test_models(
         try:
             print(f"Saving model stats to {stats_file}")
             with open(stats_file, "x") as f:
-                results.loc[[index]].to_json(f, orient='records', lines=True)
+                results.loc[[index]].to_json(f, orient="records", lines=True)
         except FileExistsError:
             with open(stats_file, "a") as f:
-                results.loc[[index]].to_json(f, orient='records', lines=True)
+                results.loc[[index]].to_json(f, orient="records", lines=True)
 
         print(
             f"Test {index + 1} of {len(test_specifications)} with id {id} ended at {pd.Timestamp.now()}"
