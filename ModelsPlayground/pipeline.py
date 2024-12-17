@@ -36,10 +36,15 @@ DEFAULT_FEATURES = [
 DEFAULT_STATS_FILE = "results/stats.csv"
 
 
-def load_model(model_file: str):
+def load_model(test_specification_row: pd.Series):
     """
     Load a model from a file and set the model arguments.
     """
+
+    model_file = test_specification_row["model"]
+
+    assert not pd.isna(model_file), "'model' is not defined in test specification row"
+    assert not isinstance(model_file, str), f"expected 'model' to be a string, instead got {model_file}"
 
     print(f"Loading model from {model_file}")
 
@@ -187,9 +192,13 @@ def test_models(
         current_timestamp = pd.Timestamp.now()
 
         model = test["model"]
-        assert not pd.isna(
-            test["model"]
-        ), f"'model' is defined in test specification at index {index} but is NaN"
+
+        if isinstance(model, str):
+            model = load_model(test)
+            results.at[index, "model"] = f"{model} (loaded from {test['model']})"
+        else:
+            print(f"Using provided model {model}")
+            pass
 
         data_sampled = data.sample(n=int(sample_size), random_state=random_state)
 
@@ -205,12 +214,6 @@ def test_models(
         )
 
         start_time = time.time()
-        if isinstance(model, str):
-            model = load_model(model)
-            results.at[index, "model"] = f"{model} (loaded from {test['model']})"
-        else:
-            print(f"Using provided model {model}")
-            pass
 
         print(
             f"Fitting model {model} for train size {len(x_train)} started at {current_timestamp}"
@@ -223,15 +226,30 @@ def test_models(
             f"Predicting model {model} for test size {len(x_test)} started at {current_timestamp}"
         )
         start_time = time.time()
-        y_pred = model.predict(x_test)
+        y_test_pred = model.predict(x_test)
         time_pred = time.time() - start_time
 
+        mse = mean_squared_error(y_test, y_test_pred)
+        r2 = r2_score(y_test, y_test_pred)
+
+        # save results
+        results.at[index, "date_ran"] = current_timestamp
         results.at[index, "time_fitting"] = str(timedelta(seconds=time_fitting))
         results.at[index, "time_pred"] = str(timedelta(seconds=time_pred))
-        results.at[index, "mse"] = mean_squared_error(y_test, y_pred)
-        results.at[index, "r2"] = r2_score(y_test, y_pred)
+        results.at[index, "mse"] = mse
+        results.at[index, "r2"] = r2
+        results.at[index, "mse_train"] = mse_train
+        results.at[index, "r2_train"] = r2_train
         results.at[index, "model_parameters"] = model.get_params()
-        results.at[index, "date_ran"] = current_timestamp
+
+        # overfitting analysis
+        y_train_pred = model.predict(x_train)
+
+        mse_train = mean_squared_error(y_train, y_train_pred)
+        r2_train = r2_score(y_train, y_train_pred)
+
+        results.at[index, "mse_diff_train_test"] = mse_train - mse
+        results.at[index, "mse_diff_train_test"] = r2_train - r2
 
         # save the model to a file if needed
         if not pd.isna(save_model) and save_model:
