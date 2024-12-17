@@ -43,7 +43,9 @@ def load_model(test_specification_row: pd.Series):
     model_file = test_specification_row["model"]
 
     assert not pd.isna(model_file), "'model' is not defined in test specification row"
-    assert not isinstance(model_file, str), f"expected 'model' to be a string, instead got {model_file}"
+    assert not isinstance(
+        model_file, str
+    ), f"expected 'model' to be a string, instead got {model_file}"
 
     print(f"Loading model from {model_file}")
 
@@ -258,8 +260,10 @@ def test_models(
         print(
             f"Calculation of cross validation metrics for model {model} for test size {len(x_test)} (test_size={test_size}) started at {current_timestamp}"
         )
-        cv_mse = -cross_val_score(model, x_train, y_train, cv=5, scoring='neg_mean_squared_error')
-        cv_r2 = cross_val_score(model, x_train, y_train, cv=5, scoring='r2')
+        cv_mse = -cross_val_score(
+            model, x_train, y_train, cv=5, scoring="neg_mean_squared_error"
+        )
+        cv_r2 = cross_val_score(model, x_train, y_train, cv=5, scoring="r2")
 
         if "cross_val_mse" not in results:
             results["cross_val_mse"] = np.NaN
@@ -295,7 +299,7 @@ def test_models(
         except FileExistsError:
             with open(stats_file, "a") as f:
                 results.loc[[index]].to_csv(f, header=False, index=False)
-        
+
         print(
             f"Test {index + 1} of {len(test_specifications)} with id {id} ended at {current_timestamp}"
         )
