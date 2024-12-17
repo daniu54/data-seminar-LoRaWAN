@@ -262,12 +262,12 @@ def test_models(
         results.at[index, "mse_train"] = mse_train
         results.at[index, "r2_train"] = r2_train
         results.at[index, "mse_diff_train_test"] = mse_train - mse
-        results.at[index, "mse_diff_train_test"] = r2_train - r2
+        results.at[index, "r2_diff_train_test"] = r2_train - r2
 
         # cross-validation
         folds = 5
         print(
-            f"Calculation of cross validation ({folds} folds) metrics for model {model} for test size {len(x_test)} (test_size={test_size}) started at {current_timestamp}"
+            f"Calculation of cross validation metrics ({folds} folds) for model {model} for test size {len(x_test)} (test_size={test_size}) started at {current_timestamp}"
         )
 
         cv_mse = -cross_val_score(
