@@ -246,6 +246,7 @@ def test_models(
         # save results
         results.at[index, "model"] = str(model)
         results.at[index, "model_type"] = model.__class__.__name__
+        results.at[index, "model_type_full"] = f"{model.__class__.__module__}.{model.__class__.__name__}"
         results.at[index, "time_fitting"] = str(timedelta(seconds=time_fitting))
         results.at[index, "time_pred"] = str(timedelta(seconds=time_pred))
         results.at[index, "mse"] = mse
