@@ -6,8 +6,8 @@ import numpy as np
 import uuid
 
 # models
-from scipy.optimize import curve_fit # multip. linear regression
-from sklearn.svm import SVR # support vector forrest
+from scipy.optimize import curve_fit  # multip. linear regression
+from sklearn.svm import SVR  # support vector forrest
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.neural_network import MLPRegressor
 
@@ -19,12 +19,22 @@ from datetime import timedelta
 import pandas as pd
 import time
 
-import joblib # for persisting models
+import joblib  # for persisting models
 
 from enum import Enum
 
-DEFAULT_FEATURES = ['distance', 'c_walls', 'co2', 'humidity', 'pm25', 'pressure', 'temperature', 'snr']
+DEFAULT_FEATURES = [
+    "distance",
+    "c_walls",
+    "co2",
+    "humidity",
+    "pm25",
+    "pressure",
+    "temperature",
+    "snr",
+]
 DEFAULT_STATS_FILE = "results/stats.csv"
+
 
 def load_model(model_file: str):
     """
@@ -37,31 +47,38 @@ def load_model(model_file: str):
 
     return model
 
+
 def new_test_specification(model):
     """
     Create a new test specification from a SupportedModels enum value.
     """
     return {
-        'model': model, # model object or path string to load a model from
-        'id': None, # id for the test run, string, default: generate random id during testing
-        'test_size': None, # see train_test_split(test_size=test_size)
-        'sample_size': None, # how many data entries to use as integer, default: None, use 100% of provided data
-        'features': None, # array of column names from data, default: use DEFAULT_FEATURES
-        'save_model': False, # whether the model should be saved, default: False
-        'random_state': None, # used in data.sample and train_test_split, default: None
+        "model": model,  # model object or path string to load a model from
+        "id": None,  # id for the test run, string, default: generate random id during testing
+        "test_size": None,  # see train_test_split(test_size=test_size)
+        "sample_size": None,  # how many data entries to use as integer, default: None, use 100% of provided data
+        "features": None,  # array of column names from data, default: use DEFAULT_FEATURES
+        "save_model": False,  # whether the model should be saved, default: False
+        "random_state": None,  # used in data.sample and train_test_split, default: None
     }
+
 
 def get_model_file_name(test_specification: pd.Series):
     return f"models/{test_specification['id']}.joblib"
 
-def set_defaults_for_column(test_specifications: pd.DataFrame, column: str, default: Union[Callable, object] = None):
+
+def set_defaults_for_column(
+    test_specifications: pd.DataFrame,
+    column: str,
+    default: Union[Callable, object] = None,
+):
     """
     Set default values for a column in test specifications.
     The default is an object or a callable that generates the default value.
     """
     if default is None:
         default = np.NaN
-    
+
     if column not in test_specifications:
         test_specifications[column] = np.NaN
 
@@ -75,26 +92,33 @@ def set_defaults_for_column(test_specifications: pd.DataFrame, column: str, defa
             # only do it at the first iteration to avoid unnecessary overhead
             if index == 0:
                 if isinstance(default_value, (list, dict)):
-                    test_specifications[column] = test_specifications[column].astype(object)
+                    test_specifications[column] = test_specifications[column].astype(
+                        object
+                    )
                 if isinstance(default_value, (str)):
-                    test_specifications[column] = test_specifications[column].astype("string")
+                    test_specifications[column] = test_specifications[column].astype(
+                        "string"
+                    )
 
             test_specifications.at[index, column] = default_value
+
 
 def set_defaults_where_needed(test_specifications: pd.DataFrame, data: pd.DataFrame):
     """
     Set default values where needed in test specifications.
     """
+
     def generate_id():
-        return str(uuid.uuid4()).replace('-', '')[:8]
+        return str(uuid.uuid4()).replace("-", "")[:8]
 
-    set_defaults_for_column(test_specifications, 'id', generate_id)
+    set_defaults_for_column(test_specifications, "id", generate_id)
 
-    set_defaults_for_column(test_specifications, 'features', default=DEFAULT_FEATURES)
-    set_defaults_for_column(test_specifications, 'sample_size', default=len(data))
-    set_defaults_for_column(test_specifications, 'save_model', default=False)
-    set_defaults_for_column(test_specifications, 'test_size', default=0.25)
-    set_defaults_for_column(test_specifications, 'random_state')
+    set_defaults_for_column(test_specifications, "features", default=DEFAULT_FEATURES)
+    set_defaults_for_column(test_specifications, "sample_size", default=len(data))
+    set_defaults_for_column(test_specifications, "save_model", default=False)
+    set_defaults_for_column(test_specifications, "test_size", default=0.25)
+    set_defaults_for_column(test_specifications, "random_state")
+
 
 def get_value(test_specification: pd.Series, column: str):
     """
@@ -109,10 +133,15 @@ def get_value(test_specification: pd.Series, column: str):
             return result
         if pd.isna(result):
             return None
-    
+
     return result
 
-def test_models(data: pd.DataFrame, test_specifications: pd.DataFrame | list[object], stats_file: str = DEFAULT_STATS_FILE):
+
+def test_models(
+    data: pd.DataFrame,
+    test_specifications: pd.DataFrame | list[object],
+    stats_file: str = DEFAULT_STATS_FILE,
+):
     """
     Test models with given data and test specifications.
 
@@ -127,68 +156,82 @@ def test_models(data: pd.DataFrame, test_specifications: pd.DataFrame | list[obj
         # copy the DataFrame to avoid modifying the original
         test_specifications = test_specifications.copy()
 
-    assert 'model' in test_specifications, "'model' column is required in test specifications"
+    assert (
+        "model" in test_specifications
+    ), "'model' column is required in test specifications"
 
     set_defaults_where_needed(test_specifications, data)
 
     results = test_specifications.copy()
 
     # move columns around for readability
-    results.insert(0, 'id', results.pop('id'))
-    results.insert(1, 'model', results.pop('model'))
-    results.insert(2, 'mse', np.NaN)
-    results.insert(3, 'r2', np.NaN)
-    results.insert(4, 'model_parameters', np.NaN)
-    results['model_parameters'] = results['model_parameters'].astype(object) # need to tell pandas that we will be storing dictionaries here
+    results.insert(0, "id", results.pop("id"))
+    results.insert(1, "model", results.pop("model"))
+    results.insert(2, "mse", np.NaN)
+    results.insert(3, "r2", np.NaN)
+    results.insert(4, "model_parameters", np.NaN)
+    results["model_parameters"] = results["model_parameters"].astype(
+        object
+    )  # need to tell pandas that we will be storing dictionaries here
 
     test_start = time.time()
 
     for index, test in test_specifications.iterrows():
-        id = get_value(test, 'id')
-        test_size = get_value(test, 'test_size')
-        features = get_value(test, 'features')
-        random_state = get_value(test, 'random_state')
-        sample_size = get_value(test, 'sample_size')
-        save_model = get_value(test, 'save_model')
+        id = get_value(test, "id")
+        test_size = get_value(test, "test_size")
+        features = get_value(test, "features")
+        random_state = get_value(test, "random_state")
+        sample_size = get_value(test, "sample_size")
+        save_model = get_value(test, "save_model")
 
         current_timestamp = pd.Timestamp.now()
 
-        model = test['model']
-        assert not pd.isna(test['model']), f"'model' is defined in test specification at index {index} but is NaN"
+        model = test["model"]
+        assert not pd.isna(
+            test["model"]
+        ), f"'model' is defined in test specification at index {index} but is NaN"
 
         data_sampled = data.sample(n=int(sample_size), random_state=random_state)
 
         x = data_sampled[features]
-        y = data_sampled['exp_pl']
+        y = data_sampled["exp_pl"]
 
-        print(f"Test {index + 1} of {len(test_specifications)} with id {id} started at {current_timestamp}")
+        print(
+            f"Test {index + 1} of {len(test_specifications)} with id {id} started at {current_timestamp}"
+        )
 
-        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=test_size, random_state=random_state)
-        
+        x_train, x_test, y_train, y_test = train_test_split(
+            x, y, test_size=test_size, random_state=random_state
+        )
+
         start_time = time.time()
         if isinstance(model, str):
             model = load_model(model)
-            results.at[index, 'model'] = f"{model} (loaded from {test['model']})"
+            results.at[index, "model"] = f"{model} (loaded from {test['model']})"
         else:
             print(f"Using provided model {model}")
             pass
 
-        print(f"Fitting model {model} for train size {len(x_train)} started at {current_timestamp}")
+        print(
+            f"Fitting model {model} for train size {len(x_train)} started at {current_timestamp}"
+        )
         start_time = time.time()
         model.fit(x_train, y_train)
         time_fitting = time.time() - start_time
 
-        print(f"Predicting model {model} for test size {len(x_test)} started at {current_timestamp}")
+        print(
+            f"Predicting model {model} for test size {len(x_test)} started at {current_timestamp}"
+        )
         start_time = time.time()
         y_pred = model.predict(x_test)
         time_pred = time.time() - start_time
 
-        results.at[index, 'time_fitting'] = str(timedelta(seconds=time_fitting))
-        results.at[index, 'time_pred'] = str(timedelta(seconds=time_pred))
-        results.at[index, 'mse'] = mean_squared_error(y_test, y_pred)
-        results.at[index, 'r2'] = r2_score(y_test, y_pred)
-        results.at[index, 'model_parameters'] = model.get_params()
-        results.at[index, 'date_ran'] = current_timestamp
+        results.at[index, "time_fitting"] = str(timedelta(seconds=time_fitting))
+        results.at[index, "time_pred"] = str(timedelta(seconds=time_pred))
+        results.at[index, "mse"] = mean_squared_error(y_test, y_pred)
+        results.at[index, "r2"] = r2_score(y_test, y_pred)
+        results.at[index, "model_parameters"] = model.get_params()
+        results.at[index, "date_ran"] = current_timestamp
 
         # save the model to a file if needed
         if not pd.isna(save_model) and save_model:
@@ -196,7 +239,7 @@ def test_models(data: pd.DataFrame, test_specifications: pd.DataFrame | list[obj
             print(f"Saving model to {model_file}")
             os.makedirs(os.path.dirname(model_file), exist_ok=True)
             joblib.dump(model, model_file)
-        
+
         # save test results for each iteration
         os.makedirs(os.path.dirname(stats_file), exist_ok=True)
         try:
@@ -205,10 +248,12 @@ def test_models(data: pd.DataFrame, test_specifications: pd.DataFrame | list[obj
                 results.loc[[index]].to_csv(f, index=False)
         except FileExistsError:
             with open(stats_file, "a") as f:
-                results.loc[[index]].to_csv(f, header=False, index=False) 
+                results.loc[[index]].to_csv(f, header=False, index=False)
 
     test_end = time.time()
 
-    print(f"Test took {time.strftime('%H:%M:%S', time.gmtime(test_end - test_start))} for {len(test_specifications)} tests")
+    print(
+        f"Test took {time.strftime('%H:%M:%S', time.gmtime(test_end - test_start))} for {len(test_specifications)} tests"
+    )
 
     return results
