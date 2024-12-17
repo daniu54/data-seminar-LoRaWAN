@@ -54,26 +54,30 @@ def new_test_specification(model):
 def get_model_file_name(test_specification: pd.Series):
     return f"models/{test_specification['id']}.joblib"
 
-def set_defaults_for_column(test_specifications: pd.DataFrame, column: str, default: Union[Callable, object] = np.NaN):
+def set_defaults_for_column(test_specifications: pd.DataFrame, column: str, default: Union[Callable, object] = None):
     """
     Set default values for a column in test specifications.
-    The default is a callable or an object that generates the value for a given row index and row.
-    If default is None and the column is not in test_specifications, the column is set to NaN.
+    The default is an object or a callable that generates the default value.
     """
-    if default is None and column not in test_specifications:
-        test_specifications[column] = default
-        return
+    if default is None:
+        default = np.NaN
+    
+    if column not in test_specifications:
+        test_specifications[column] = np.NaN
 
-    for index, row in test_specifications.iterrows():
-        if column not in row or pd.isna(row[column]):
-            # retrieve the default value from callable if default is a function
-            default_value = default(index) if callable(default) else default
+    for index, _ in test_specifications.iterrows():
+        # overwrite with default only if the value is NaN
+        if pd.isna(test_specifications.at[index, column]):
+            default_value = default() if callable(default) else default
 
-            # lists and dicts may be interpreted as scalar values by pandas, so we need to explicitly specify the column dtype to object
-            if isinstance(default_value, (list, dict)):
-                # do it only once for the first row to avoid performance issues
-                if index == 0:
+            # lists and dicts may be interpreted incorrectly by pandas, so we need to explicitly specify the column dtype as object
+            # additionally, we correct string columns to correct string dtype
+            # only do it at the first iteration to avoid unnecessary overhead
+            if index == 0:
+                if isinstance(default_value, (list, dict)):
                     test_specifications[column] = test_specifications[column].astype(object)
+                if isinstance(default_value, (str)):
+                    test_specifications[column] = test_specifications[column].astype("string")
 
             test_specifications.at[index, column] = default_value
 
@@ -81,7 +85,7 @@ def set_defaults_where_needed(test_specifications: pd.DataFrame, data: pd.DataFr
     """
     Set default values where needed in test specifications.
     """
-    def generate_id(_):
+    def generate_id():
         return str(uuid.uuid4()).replace('-', '')[:8]
 
     set_defaults_for_column(test_specifications, 'id', generate_id)
@@ -134,6 +138,8 @@ def test_models(data: pd.DataFrame, test_specifications: pd.DataFrame | list[obj
     results.insert(1, 'model', results.pop('model'))
     results.insert(2, 'mse', np.NaN)
     results.insert(3, 'r2', np.NaN)
+    results.insert(4, 'model_parameters', np.NaN)
+    results['model_parameters'] = results['model_parameters'].astype(object) # need to tell pandas that we will be storing dictionaries here
 
     test_start = time.time()
 
@@ -181,7 +187,7 @@ def test_models(data: pd.DataFrame, test_specifications: pd.DataFrame | list[obj
         results.at[index, 'time_pred'] = str(timedelta(seconds=time_pred))
         results.at[index, 'mse'] = mean_squared_error(y_test, y_pred)
         results.at[index, 'r2'] = r2_score(y_test, y_pred)
-        results.at[index, 'model_hyperparameters'] = model.get_params()
+        results.at[index, 'model_parameters'] = model.get_params()
         results.at[index, 'date_ran'] = current_timestamp
 
         # save the model to a file if needed
