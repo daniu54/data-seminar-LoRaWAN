@@ -274,15 +274,24 @@ def test_models(
         # cross-validation
         folds = 5
         print(
-            f"Calculation of cross validation metrics ({folds} folds) for model {model} over whole dataset started at {pd.Timestamp.now()}"
+            f"Calculation of cross validation metrics ({folds} folds) for model {model} over whole dataset"
         )
 
+        print(
+            f"Calculation of cross validation for mse started at {pd.Timestamp.now()}"
+        )
         start_time = time.time()
         cv_mse = -cross_val_score(
             model, x, y, cv=folds, scoring="neg_mean_squared_error"
         )
+        cross_val_mse_time = str(timedelta(seconds=time.time() - start_time))
+        print(f"Calculation of cross validation for mse took {cross_val_mse_time}")
+
+        print(f"Calculation of cross validation for r2 started at {pd.Timestamp.now()}")
+        start_time = time.time()
         cv_r2 = cross_val_score(model, x, y, cv=folds, scoring="r2")
-        cross_val_time = time.time() - start_time
+        cross_val_r2_time = str(timedelta(seconds=time.time() - start_time))
+        print(f"Calculation of cross validation for r2 took {cross_val_r2_time}")
 
         cross_val_colum_name = f"cross_validation_k{folds}"
         cross_val_mse_column = cross_val_colum_name + "_mse"
@@ -300,9 +309,8 @@ def test_models(
         results.at[index, cross_val_mse_column + "_mean"] = cv_mse.mean()
         results.at[index, cross_val_r2_column + "_mean"] = cv_r2.mean()
 
-        results.at[index, "time_" + cross_val_colum_name] = str(
-            timedelta(seconds=cross_val_time)
-        )
+        results.at[index, "time_" + cross_val_mse_column] = cross_val_mse_time
+        results.at[index, "time_" + cross_val_r2_column] = cross_val_r2_time
 
         results.at[index, "date_ran"] = str(pd.Timestamp.now())
         results.at[index, "time_test_run"] = str(
