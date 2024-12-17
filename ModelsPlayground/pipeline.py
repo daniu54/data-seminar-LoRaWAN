@@ -32,8 +32,8 @@ DEFAULT_FEATURES = [
     "temperature",
     "snr",
 ]
-DEFAULT_STATS_FILE = "results/stats.json"
 
+DEFAULT_STATS_FILE = "results/model_stats.json"
 
 def load_model(test_specification_row: pd.Series):
     """
