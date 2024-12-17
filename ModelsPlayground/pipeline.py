@@ -143,6 +143,8 @@ def test_models(data: pd.DataFrame, test_specifications: pd.DataFrame | list[obj
         sample_size = get_value(test, 'sample_size')
         save_model = get_value(test, 'save_model')
 
+        current_timestamp = pd.Timestamp.now()
+
         model = test['model']
         assert not pd.isna(test['model']), f"'model' is defined in test specification at index {index} but is NaN"
 
@@ -151,7 +153,7 @@ def test_models(data: pd.DataFrame, test_specifications: pd.DataFrame | list[obj
         x = data_sampled[features]
         y = data_sampled['exp_pl']
 
-        print(f"Test {index + 1} of {len(test_specifications)} with id {id}")
+        print(f"Test {index + 1} of {len(test_specifications)} with id {id} started at {current_timestamp}")
 
         x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=test_size, random_state=random_state)
         
@@ -163,12 +165,12 @@ def test_models(data: pd.DataFrame, test_specifications: pd.DataFrame | list[obj
             print(f"Using provided model {model}")
             pass
 
-        print(f"Fitting model {model} for train size {len(x_train)}")
+        print(f"Fitting model {model} for train size {len(x_train)} started at {current_timestamp}")
         start_time = time.time()
         model.fit(x_train, y_train)
         time_fitting = time.time() - start_time
 
-        print(f"Predicting model {model} for test size {len(x_test)}")
+        print(f"Predicting model {model} for test size {len(x_test)} started at {current_timestamp}")
         start_time = time.time()
         y_pred = model.predict(x_test)
         time_pred = time.time() - start_time
@@ -178,6 +180,7 @@ def test_models(data: pd.DataFrame, test_specifications: pd.DataFrame | list[obj
         results.at[index, 'mse'] = mean_squared_error(y_test, y_pred)
         results.at[index, 'r2'] = r2_score(y_test, y_pred)
         results.at[index, 'model_hyperparameters'] = model.get_params()
+        results.at[index, 'date_ran'] = current_timestamp
 
         # save the model to a file if needed
         if not pd.isna(save_model) and save_model:
