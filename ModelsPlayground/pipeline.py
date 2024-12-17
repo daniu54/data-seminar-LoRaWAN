@@ -225,6 +225,7 @@ def test_models(
         )
 
         start_time = time.time()
+        test_start_time = time.time()
 
         print(
             f"Fitting model {model} for train size {len(x_test)} (test_size={test_size}) started at {pd.Timestamp.now()}"
@@ -304,6 +305,9 @@ def test_models(
         )
 
         results.at[index, "date_ran"] = str(pd.Timestamp.now())
+        results.at[index, "time_test_run"] = str(
+            timedelta(seconds=time.time() - test_start_time)
+        )
 
         # save the model to a file if needed
         if not pd.isna(save_model) and save_model:
