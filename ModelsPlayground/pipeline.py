@@ -231,13 +231,17 @@ def test_models(
                 print(f"Using provided model {model}")
                 pass
 
-            if hasattr(model, "random_state"):
+            if "random_state" in model.get_params():
                 model.set_params(random_state=random_state)
 
-            if hasattr(model, "verbose"):
-                model.set_params(verbose=verbose)
+            if "verbose" in model.get_params():
+                if isinstance(model.get_params()["verbose"], bool):
+                    # some models require verbose to be a boolean
+                    model.set_params(verbose=verbose > 0)
+                else:  # assume verbose is an integer
+                    model.set_params(verbose=verbose)
 
-            if hasattr(model, "n_jobs"):
+            if "n_jobs" in model.get_params():
                 model.set_params(n_jobs=n_jobs)
 
             data_sampled = data.sample(n=int(sample_size), random_state=random_state)
