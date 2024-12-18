@@ -16,6 +16,7 @@ from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import mean_squared_error, r2_score
 
 from datetime import timedelta
+import traceback
 
 import pandas as pd
 import time
@@ -211,191 +212,206 @@ def test_models(
         sys.stdout = tee_stdout
         sys.stderr = tee_stderr
 
-        id = get_value(test, "id")
-        test_size = get_value(test, "test_size")
-        features = get_value(test, "features")
-        random_state = get_value(test, "random_state")
-        sample_size = get_value(test, "sample_size")
-        save_model = get_value(test, "save_model")
-        verbose = int(get_value(test, "verbose"))
-        n_jobs = int(get_value(test, "n_jobs"))
-
-        model = test["model"]
-
-        if isinstance(model, str):
-            model = load_model(test)
-            results.at[index, "model"] = f"{model} (loaded from {test['model']})"
-        else:
-            print(f"Using provided model {model}")
-            pass
-
-        if hasattr(model, "random_state"):
-            model.set_params(random_state=random_state)
-
-        if hasattr(model, "verbose"):
-            model.set_params(verbose=verbose)
-
-        if hasattr(model, "n_jobs"):
-            model.set_params(n_jobs=n_jobs)
-
-        data_sampled = data.sample(n=int(sample_size), random_state=random_state)
-
-        x = data_sampled[features]
-        y = data_sampled["exp_pl"]
-
-        print(
-            f"Test {index + 1} of {len(test_specifications)} with id {id} started at {pd.Timestamp.now()}"
-        )
-
-        x_train, x_test, y_train, y_test = train_test_split(
-            x, y, test_size=test_size, random_state=random_state
-        )
-
-        start_time = time.time()
-        test_start_time = time.time()
-
-        results.at[index, "time_test_start"] = pd.Timestamp.now()
-        results.at[index, "time_test_start_pretty"] = str(pd.Timestamp.now())
-
-        print(
-            f"Fitting model {model} for train size {len(x_test)} (test_size={test_size}) started at {pd.Timestamp.now()}"
-        )
-        start_time = time.time()
-        model.fit(x_train, y_train)
-        time_fitting = time.time() - start_time
-
-        # save the model to a file after fitting
-        if save_model:
-            model_file = get_model_file_name(test)
-            print(f"Saving model to {model_file}")
-            os.makedirs(os.path.dirname(model_file), exist_ok=True)
-            joblib.dump(model, model_file)
-
-        print(
-            f"Predicting model {model} for test size {len(x_test)} (test_size={test_size}) started at {pd.Timestamp.now()}"
-        )
-        start_time = time.time()
-        y_test_pred = model.predict(x_test)
-        time_pred = time.time() - start_time
-
-        mse = mean_squared_error(y_test, y_test_pred)
-        r2 = r2_score(y_test, y_test_pred)
-
-        # save results
-        results.at[index, "model"] = str(model)
-        results.at[index, "model_type"] = model.__class__.__name__
-        results.at[index, "model_type_full"] = (
-            f"{model.__class__.__module__}.{model.__class__.__name__}"
-        )
-        results.at[index, "time_fitting"] = str(timedelta(seconds=time_fitting))
-        results.at[index, "time_pred"] = str(timedelta(seconds=time_pred))
-        results.at[index, "mse"] = mse
-        results.at[index, "r2"] = r2
-        results.at[index, "model_parameters"] = model.get_params()
-
-        # overfitting analysis
-        print(
-            f"Calculation of overfitting metrics for model {model} for test size {len(x_test)} (test_size={test_size}) started at {pd.Timestamp.now()}"
-        )
-        y_train_pred = model.predict(x_train)
-
-        # performance on training data
-        mse_train = mean_squared_error(y_train, y_train_pred)
-        r2_train = r2_score(y_train, y_train_pred)
-
-        results.at[index, "mse_train"] = mse_train
-        results.at[index, "r2_train"] = r2_train
-        results.at[index, "mse_diff_train_test"] = mse_train - mse
-        results.at[index, "r2_diff_train_test"] = r2_train - r2
-
-        # cross-validation
-        folds = 5
-        print(
-            f"Calculation of cross validation metrics ({folds} folds) for model {model} over whole dataset"
-        )
-
-        print(
-            f"Calculation of cross validation for mse started at {pd.Timestamp.now()}"
-        )
-        start_time = time.time()
-        cv_mse = -cross_val_score(
-            model,
-            x,
-            y,
-            cv=folds,
-            scoring="neg_mean_squared_error",
-            # n_jobs cause google colab workers to hang for some values
-            # n_jobs=n_jobs,
-            verbose=verbose,
-        )
-        cross_val_mse_time = str(timedelta(seconds=time.time() - start_time))
-        print(f"Calculation of cross validation for mse took {cross_val_mse_time}")
-
-        print(f"Calculation of cross validation for r2 started at {pd.Timestamp.now()}")
-        start_time = time.time()
-        cv_r2 = cross_val_score(
-            model,
-            x,
-            y,
-            cv=folds,
-            scoring="r2",
-            # n_jobs cause google colab workers to hang for some values
-            # n_jobs=n_jobs,
-            verbose=verbose,
-        )
-        cross_val_r2_time = str(timedelta(seconds=time.time() - start_time))
-        print(f"Calculation of cross validation for r2 took {cross_val_r2_time}")
-
-        cross_val_colum_name = f"cross_validation_k{folds}"
-        cross_val_mse_column = cross_val_colum_name + "_mse"
-        cross_val_r2_column = cross_val_colum_name + "_r2"
-
-        # need to tell pandas that we will be storing lists in these columns
-        for column in [cross_val_mse_column, cross_val_r2_column]:
-            if column not in results:
-                results[column] = np.NaN
-                results[column] = results[column].astype(object)
-
-        results.at[index, cross_val_mse_column] = cv_mse
-        results.at[index, cross_val_r2_column] = cv_r2
-
-        results.at[index, cross_val_mse_column + "_mean"] = cv_mse.mean()
-        results.at[index, cross_val_r2_column + "_mean"] = cv_r2.mean()
-
-        results.at[index, "time_" + cross_val_mse_column] = cross_val_mse_time
-        results.at[index, "time_" + cross_val_r2_column] = cross_val_r2_time
-
-        test_end = pd.Timestamp.now()
-
-        results.at[index, "time_test_end"] = test_end
-        results.at[index, "time_test_end_pretty"] = str(pd.Timestamp.now())
-        results.at[index, "time_test_duration"] = str(
-            timedelta(seconds=time.time() - test_start_time)
-        )
-
-        # save test results for each iteration
-        os.makedirs(os.path.dirname(stats_file), exist_ok=True)
         try:
-            print(f"Saving model stats to {stats_file}")
-            with open(stats_file, "x") as f:
-                results.loc[[index]].to_json(f, orient="records", lines=True)
-        except FileExistsError:
-            with open(stats_file, "a") as f:
-                results.loc[[index]].to_json(f, orient="records", lines=True)
+            id = get_value(test, "id")
+            test_size = get_value(test, "test_size")
+            features = get_value(test, "features")
+            random_state = get_value(test, "random_state")
+            sample_size = get_value(test, "sample_size")
+            save_model = get_value(test, "save_model")
+            verbose = int(get_value(test, "verbose"))
+            n_jobs = int(get_value(test, "n_jobs"))
 
-        print(
-            f"Test {index + 1} of {len(test_specifications)} with id {id} ended at {pd.Timestamp.now()}"
-        )
+            model = test["model"]
 
-        # Reset original stdout and stderr
-        sys.stdout = tee_stdout.stdout
-        sys.stderr = tee_stderr.stderr
+            if isinstance(model, str):
+                model = load_model(test)
+                results.at[index, "model"] = f"{model} (loaded from {test['model']})"
+            else:
+                print(f"Using provided model {model}")
+                pass
 
-        # Write logs to a file
-        with open(get_model_logfile_name(test, test_end), "w") as f:
-            f.write(logs_buffer.getvalue())
+            if hasattr(model, "random_state"):
+                model.set_params(random_state=random_state)
 
-        logs_buffer.close()
+            if hasattr(model, "verbose"):
+                model.set_params(verbose=verbose)
+
+            if hasattr(model, "n_jobs"):
+                model.set_params(n_jobs=n_jobs)
+
+            data_sampled = data.sample(n=int(sample_size), random_state=random_state)
+
+            x = data_sampled[features]
+            y = data_sampled["exp_pl"]
+
+            print(
+                f"Test {index + 1} of {len(test_specifications)} with id {id} started at {pd.Timestamp.now()}"
+            )
+
+            x_train, x_test, y_train, y_test = train_test_split(
+                x, y, test_size=test_size, random_state=random_state
+            )
+
+            start_time = time.time()
+            test_start_time = time.time()
+
+            results.at[index, "time_test_start"] = pd.Timestamp.now()
+            results.at[index, "time_test_start_pretty"] = str(pd.Timestamp.now())
+
+            print(
+                f"Fitting model {model} for train size {len(x_test)} (test_size={test_size}) started at {pd.Timestamp.now()}"
+            )
+            start_time = time.time()
+            model.fit(x_train, y_train)
+            time_fitting = time.time() - start_time
+
+            # save the model to a file after fitting
+            if save_model:
+                model_file = get_model_file_name(test)
+                print(f"Saving model to {model_file}")
+                os.makedirs(os.path.dirname(model_file), exist_ok=True)
+                joblib.dump(model, model_file)
+
+            print(
+                f"Predicting model {model} for test size {len(x_test)} (test_size={test_size}) started at {pd.Timestamp.now()}"
+            )
+            start_time = time.time()
+            y_test_pred = model.predict(x_test)
+            time_pred = time.time() - start_time
+
+            mse = mean_squared_error(y_test, y_test_pred)
+            r2 = r2_score(y_test, y_test_pred)
+
+            # save results
+            results.at[index, "model"] = str(model)
+            results.at[index, "model_type"] = model.__class__.__name__
+            results.at[index, "model_type_full"] = (
+                f"{model.__class__.__module__}.{model.__class__.__name__}"
+            )
+            results.at[index, "time_fitting"] = str(timedelta(seconds=time_fitting))
+            results.at[index, "time_pred"] = str(timedelta(seconds=time_pred))
+            results.at[index, "mse"] = mse
+            results.at[index, "r2"] = r2
+            results.at[index, "model_parameters"] = model.get_params()
+
+            # overfitting analysis
+            print(
+                f"Calculation of overfitting metrics for model {model} for test size {len(x_test)} (test_size={test_size}) started at {pd.Timestamp.now()}"
+            )
+            y_train_pred = model.predict(x_train)
+
+            # performance on training data
+            mse_train = mean_squared_error(y_train, y_train_pred)
+            r2_train = r2_score(y_train, y_train_pred)
+
+            results.at[index, "mse_train"] = mse_train
+            results.at[index, "r2_train"] = r2_train
+            results.at[index, "mse_diff_train_test"] = mse_train - mse
+            results.at[index, "r2_diff_train_test"] = r2_train - r2
+
+            # cross-validation
+            folds = 5
+            print(
+                f"Calculation of cross validation metrics ({folds} folds) for model {model} over whole dataset"
+            )
+
+            print(
+                f"Calculation of cross validation for mse started at {pd.Timestamp.now()}"
+            )
+            start_time = time.time()
+            cv_mse = -cross_val_score(
+                model,
+                x,
+                y,
+                cv=folds,
+                scoring="neg_mean_squared_error",
+                # n_jobs cause google colab workers to hang for some values
+                # n_jobs=n_jobs,
+                verbose=verbose,
+            )
+            cross_val_mse_time = str(timedelta(seconds=time.time() - start_time))
+            print(f"Calculation of cross validation for mse took {cross_val_mse_time}")
+
+            print(
+                f"Calculation of cross validation for r2 started at {pd.Timestamp.now()}"
+            )
+            start_time = time.time()
+            cv_r2 = cross_val_score(
+                model,
+                x,
+                y,
+                cv=folds,
+                scoring="r2",
+                # n_jobs cause google colab workers to hang for some values
+                # n_jobs=n_jobs,
+                verbose=verbose,
+            )
+            cross_val_r2_time = str(timedelta(seconds=time.time() - start_time))
+            print(f"Calculation of cross validation for r2 took {cross_val_r2_time}")
+
+            cross_val_colum_name = f"cross_validation_k{folds}"
+            cross_val_mse_column = cross_val_colum_name + "_mse"
+            cross_val_r2_column = cross_val_colum_name + "_r2"
+
+            # need to tell pandas that we will be storing lists in these columns
+            for column in [cross_val_mse_column, cross_val_r2_column]:
+                if column not in results:
+                    results[column] = np.NaN
+                    results[column] = results[column].astype(object)
+
+            results.at[index, cross_val_mse_column] = cv_mse
+            results.at[index, cross_val_r2_column] = cv_r2
+
+            results.at[index, cross_val_mse_column + "_mean"] = cv_mse.mean()
+            results.at[index, cross_val_r2_column + "_mean"] = cv_r2.mean()
+
+            results.at[index, "time_" + cross_val_mse_column] = cross_val_mse_time
+            results.at[index, "time_" + cross_val_r2_column] = cross_val_r2_time
+
+            test_end = pd.Timestamp.now()
+
+            results.at[index, "time_test_end"] = test_end
+            results.at[index, "time_test_end_pretty"] = str(pd.Timestamp.now())
+            results.at[index, "time_test_duration"] = str(
+                timedelta(seconds=time.time() - test_start_time)
+            )
+
+            results.at[index, "test_success"] = True
+
+            print(
+                f"Test {index + 1} of {len(test_specifications)} with id {id} ended at {pd.Timestamp.now()}"
+            )
+
+        except Exception as e:
+            print(
+                f"Test {index + 1} of {len(test_specifications)} failed with an error {e}"
+            )
+            traceback.print_exc()
+
+            results.at[index, "test_success"] = False
+
+            raise e
+        finally:
+            # save test results for each iteration
+            os.makedirs(os.path.dirname(stats_file), exist_ok=True)
+            try:
+                print(f"Saving model stats to {stats_file}")
+                with open(stats_file, "x") as f:
+                    results.loc[[index]].to_json(f, orient="records", lines=True)
+            except FileExistsError:
+                with open(stats_file, "a") as f:
+                    results.loc[[index]].to_json(f, orient="records", lines=True)
+
+            # Reset original stdout and stderr
+            sys.stdout = tee_stdout.stdout
+            sys.stderr = tee_stderr.stderr
+
+            # Write logs to a file
+            with open(get_model_logfile_name(test, test_end), "w") as f:
+                f.write(logs_buffer.getvalue())
+
+            logs_buffer.close()
 
     test_end = time.time()
 
