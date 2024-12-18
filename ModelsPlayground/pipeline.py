@@ -264,6 +264,13 @@ def test_models(
         model.fit(x_train, y_train)
         time_fitting = time.time() - start_time
 
+        # save the model to a file after fitting
+        if save_model:
+            model_file = get_model_file_name(test)
+            print(f"Saving model to {model_file}")
+            os.makedirs(os.path.dirname(model_file), exist_ok=True)
+            joblib.dump(model, model_file)
+
         print(
             f"Predicting model {model} for test size {len(x_test)} (test_size={test_size}) started at {pd.Timestamp.now()}"
         )
@@ -365,13 +372,6 @@ def test_models(
         results.at[index, "time_test_duration"] = str(
             timedelta(seconds=time.time() - test_start_time)
         )
-
-        # save the model to a file if needed
-        if not pd.isna(save_model) and save_model:
-            model_file = get_model_file_name(test)
-            print(f"Saving model to {model_file}")
-            os.makedirs(os.path.dirname(model_file), exist_ok=True)
-            joblib.dump(model, model_file)
 
         # save test results for each iteration
         os.makedirs(os.path.dirname(stats_file), exist_ok=True)
