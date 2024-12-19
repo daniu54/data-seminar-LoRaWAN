@@ -260,6 +260,13 @@ def test_models(
             start_time = time.time()
             test_start_time = time.time()
 
+            results.at[index, "model"] = str(model)
+            results.at[index, "model_type"] = model.__class__.__name__
+            results.at[index, "model_type_full"] = (
+                f"{model.__class__.__module__}.{model.__class__.__name__}"
+            )
+            results.at[index, "model_parameters"] = model.get_params()
+
             results.at[index, "time_test_start"] = pd.Timestamp.now()
             results.at[index, "time_test_start_pretty"] = str(pd.Timestamp.now())
 
@@ -288,16 +295,10 @@ def test_models(
             r2 = r2_score(y_test, y_test_pred)
 
             # save results
-            results.at[index, "model"] = str(model)
-            results.at[index, "model_type"] = model.__class__.__name__
-            results.at[index, "model_type_full"] = (
-                f"{model.__class__.__module__}.{model.__class__.__name__}"
-            )
             results.at[index, "time_fitting"] = str(timedelta(seconds=time_fitting))
             results.at[index, "time_pred"] = str(timedelta(seconds=time_pred))
             results.at[index, "mse"] = mse
             results.at[index, "r2"] = r2
-            results.at[index, "model_parameters"] = model.get_params()
 
             # overfitting analysis
             print(
