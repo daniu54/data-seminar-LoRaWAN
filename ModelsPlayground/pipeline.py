@@ -416,6 +416,9 @@ def test_models(
                     results.loc[[index]].to_json(f, orient="records", lines=True)
             except FileExistsError:
                 with open(stats_file, "a") as f:
+                    f.write(
+                        "\n"
+                    )  # write a newline into file to avoid json parsing errors
                     results.loc[[index]].to_json(f, orient="records", lines=True)
 
             # Reset original stdout and stderr
