@@ -374,14 +374,6 @@ def test_models(
             results.at[index, "time_" + cross_val_mse_column] = cross_val_mse_time
             results.at[index, "time_" + cross_val_r2_column] = cross_val_r2_time
 
-            test_end = pd.Timestamp.now()
-
-            results.at[index, "time_test_end"] = test_end
-            results.at[index, "time_test_end_pretty"] = str(pd.Timestamp.now())
-            results.at[index, "time_test_duration"] = str(
-                timedelta(seconds=time.time() - test_start_time)
-            )
-
             results.at[index, "test_success"] = True
 
             print(
@@ -396,6 +388,14 @@ def test_models(
 
             results.at[index, "test_success"] = False
         finally:
+            test_end = pd.Timestamp.now()
+
+            results.at[index, "time_test_end"] = test_end
+            results.at[index, "time_test_end_pretty"] = str(pd.Timestamp.now())
+            results.at[index, "time_test_duration"] = str(
+                timedelta(seconds=time.time() - test_start_time)
+            )
+
             # save test results for each iteration
             os.makedirs(os.path.dirname(stats_file), exist_ok=True)
             try:
