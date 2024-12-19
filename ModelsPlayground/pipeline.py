@@ -403,7 +403,7 @@ def test_models(
             test_end = pd.Timestamp.now()
 
             results.at[index, "time_test_end"] = test_end
-            results.at[index, "time_test_end_pretty"] = str(pd.Timestamp.now())
+            results.at[index, "time_test_end_pretty"] = str(test_end)
             results.at[index, "time_test_duration"] = str(
                 timedelta(seconds=time.time() - test_start_time)
             )
@@ -421,15 +421,15 @@ def test_models(
                     )  # write a newline into file to avoid json parsing errors
                     results.loc[[index]].to_json(f, orient="records", lines=True)
 
-            # Reset original stdout and stderr
-            sys.stdout = tee_stdout.stdout
-            sys.stderr = tee_stderr.stderr
-
             # Write logs to a file
             logs_file = get_model_logfile_name(test, test_end)
             with open(logs_file, "w") as f:
                 print(f"Saving logs to {logs_file}")
                 f.write(logs_buffer.getvalue())
+
+            # Reset original stdout and stderr
+            sys.stdout = tee_stdout.stdout
+            sys.stderr = tee_stderr.stderr
 
             logs_buffer.close()
 
