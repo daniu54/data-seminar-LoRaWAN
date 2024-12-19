@@ -395,7 +395,7 @@ def test_models(
             results.at[index, "test_success"] = False
         finally:
             test_end = pd.Timestamp.now()
-            test_duration = (test_start - test_end).total_seconds()
+            test_duration = (test_end - test_start).total_seconds()
 
             results.at[index, "time_test_end"] = test_end
             results.at[index, "time_test_end_pretty"] = str(test_end)
