@@ -74,6 +74,7 @@ def new_test_specification(model):
         "random_state": None,  # used in data.sample and train_test_split, default: None
         "verbose": 0,  # whether to print verbose output from all functions that accept it, default: 0, no verbose output
         "n_jobs": -1,  # number of jobs to run in parallel, default: -1, use all available processors
+        "skip_cross_validation": False,  # whether to skip cross validation and recording these metrics, default: False
     }
 
 
@@ -143,6 +144,7 @@ def set_defaults_where_needed(test_specifications: pd.DataFrame, data: pd.DataFr
     set_defaults_for_column(test_specifications, "random_state")
     set_defaults_for_column(test_specifications, "verbose", default=0)
     set_defaults_for_column(test_specifications, "n_jobs", default=-1)
+    set_defaults_for_column(test_specifications, "skip_cross_validation", default=False)
 
 
 def get_value(test_specification: pd.Series, column: str):
@@ -221,6 +223,7 @@ def test_models(
             save_model = get_value(test, "save_model")
             verbose = int(get_value(test, "verbose"))
             n_jobs = int(get_value(test, "n_jobs"))
+            skip_cross_validation = get_value(test, "skip_cross_validation")
 
             model = test["model"]
 
@@ -316,63 +319,72 @@ def test_models(
             results.at[index, "r2_diff_train_test"] = r2_train - r2
 
             # cross-validation
-            folds = 5
-            print(
-                f"Calculation of cross validation metrics ({folds} folds) for model {model} over whole dataset"
-            )
+            if skip_cross_validation:
+                print(
+                    f"Skipping cross validation for model {model} because skip_cross_validation is set to True"
+                )
+            else:
+                folds = 5
+                print(
+                    f"Calculation of cross validation metrics ({folds} folds) for model {model} over whole dataset"
+                )
 
-            print(
-                f"Calculation of cross validation for mse started at {pd.Timestamp.now()}"
-            )
-            start_time = time.time()
-            cv_mse = -cross_val_score(
-                model,
-                x,
-                y,
-                cv=folds,
-                scoring="neg_mean_squared_error",
-                # n_jobs cause google colab workers to hang for some values
-                # n_jobs=n_jobs,
-                verbose=verbose,
-            )
-            cross_val_mse_time = str(timedelta(seconds=time.time() - start_time))
-            print(f"Calculation of cross validation for mse took {cross_val_mse_time}")
+                print(
+                    f"Calculation of cross validation for mse started at {pd.Timestamp.now()}"
+                )
+                start_time = time.time()
+                cv_mse = -cross_val_score(
+                    model,
+                    x,
+                    y,
+                    cv=folds,
+                    scoring="neg_mean_squared_error",
+                    # n_jobs cause google colab workers to hang for some values
+                    # n_jobs=n_jobs,
+                    verbose=verbose,
+                )
+                cross_val_mse_time = str(timedelta(seconds=time.time() - start_time))
+                print(
+                    f"Calculation of cross validation for mse took {cross_val_mse_time}"
+                )
 
-            print(
-                f"Calculation of cross validation for r2 started at {pd.Timestamp.now()}"
-            )
-            start_time = time.time()
-            cv_r2 = cross_val_score(
-                model,
-                x,
-                y,
-                cv=folds,
-                scoring="r2",
-                # n_jobs cause google colab workers to hang for some values
-                # n_jobs=n_jobs,
-                verbose=verbose,
-            )
-            cross_val_r2_time = str(timedelta(seconds=time.time() - start_time))
-            print(f"Calculation of cross validation for r2 took {cross_val_r2_time}")
+                print(
+                    f"Calculation of cross validation for r2 started at {pd.Timestamp.now()}"
+                )
+                start_time = time.time()
+                cv_r2 = cross_val_score(
+                    model,
+                    x,
+                    y,
+                    cv=folds,
+                    scoring="r2",
+                    # n_jobs cause google colab workers to hang for some values
+                    # n_jobs=n_jobs,
+                    verbose=verbose,
+                )
+                cross_val_r2_time = str(timedelta(seconds=time.time() - start_time))
+                print(
+                    f"Calculation of cross validation for r2 took {cross_val_r2_time}"
+                )
 
-            cross_val_colum_name = f"cross_validation_k{folds}"
-            cross_val_mse_column = cross_val_colum_name + "_mse"
-            cross_val_r2_column = cross_val_colum_name + "_r2"
+                cross_val_colum_name = f"cross_validation_k{folds}"
+                cross_val_mse_column = cross_val_colum_name + "_mse"
+                cross_val_r2_column = cross_val_colum_name + "_r2"
 
-            # need to tell pandas that we will be storing lists in these columns
-            for column in [cross_val_mse_column, cross_val_r2_column]:
-                if column not in results:
-                    results[column] = np.NaN
-                    results[column] = results[column].astype(object)
+                # need to tell pandas that we will be storing lists in these columns
+                for column in [cross_val_mse_column, cross_val_r2_column]:
+                    if column not in results:
+                        results[column] = np.NaN
+                        results[column] = results[column].astype(object)
 
-            results.at[index, cross_val_mse_column] = cv_mse
-            results.at[index, cross_val_r2_column] = cv_r2
+                results.at[index, cross_val_mse_column] = cv_mse
+                results.at[index, cross_val_r2_column] = cv_r2
 
-            results.at[index, cross_val_mse_column + "_mean"] = cv_mse.mean()
-            results.at[index, cross_val_r2_column + "_mean"] = cv_r2.mean()
+                results.at[index, cross_val_mse_column + "_mean"] = cv_mse.mean()
+                results.at[index, cross_val_r2_column + "_mean"] = cv_r2.mean()
 
-            results.at[index, "time_" + cross_val_mse_column] = cross_val_mse_time
-            results.at[index, "time_" + cross_val_r2_column] = cross_val_r2_time
+                results.at[index, "time_" + cross_val_mse_column] = cross_val_mse_time
+                results.at[index, "time_" + cross_val_r2_column] = cross_val_r2_time
 
             results.at[index, "test_success"] = True
 
