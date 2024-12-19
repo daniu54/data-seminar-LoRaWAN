@@ -19,7 +19,6 @@ from datetime import timedelta
 import traceback
 
 import pandas as pd
-import time
 
 import joblib  # for persisting models
 
@@ -203,7 +202,7 @@ def test_models(
         object
     )  # need to tell pandas that we will be storing dictionaries here
 
-    test_start = time.time()
+    testing_start = pd.Timestamp.now()
 
     for index, test in test_specifications.iterrows():
         logs_buffer = StringIO()
@@ -260,8 +259,7 @@ def test_models(
                 x, y, test_size=test_size, random_state=random_state
             )
 
-            start_time = time.time()
-            test_start_time = time.time()
+            test_start = pd.Timestamp.now()
 
             results.at[index, "model"] = str(model)
             results.at[index, "model_type"] = model.__class__.__name__
@@ -270,15 +268,15 @@ def test_models(
             )
             results.at[index, "model_parameters"] = model.get_params()
 
-            results.at[index, "time_test_start"] = pd.Timestamp.now()
-            results.at[index, "time_test_start_pretty"] = str(pd.Timestamp.now())
+            results.at[index, "time_test_start"] = test_start
+            results.at[index, "time_test_start_pretty"] = str(test_start)
 
             print(
                 f"Fitting model {model} for train size {len(x_test)} (test_size={test_size}) started at {pd.Timestamp.now()}"
             )
-            start_time = time.time()
+            start_time = pd.Timestamp.now()
             model.fit(x_train, y_train)
-            time_fitting = time.time() - start_time
+            time_fitting = (pd.Timestamp.now() - start_time).total_seconds()
 
             # save the model to a file after fitting
             if save_model:
@@ -290,9 +288,10 @@ def test_models(
             print(
                 f"Predicting model {model} for test size {len(x_test)} (test_size={test_size}) started at {pd.Timestamp.now()}"
             )
-            start_time = time.time()
+
+            start_time = pd.Timestamp.now()
             y_test_pred = model.predict(x_test)
-            time_pred = time.time() - start_time
+            time_pred = (pd.Timestamp.now() - start_time).total_seconds()
 
             mse = mean_squared_error(y_test, y_test_pred)
             r2 = r2_score(y_test, y_test_pred)
@@ -332,7 +331,7 @@ def test_models(
                 print(
                     f"Calculation of cross validation for mse started at {pd.Timestamp.now()}"
                 )
-                start_time = time.time()
+                start_time = pd.Timestamp.now()
                 cv_mse = -cross_val_score(
                     model,
                     x,
@@ -343,7 +342,8 @@ def test_models(
                     # n_jobs=n_jobs,
                     verbose=verbose,
                 )
-                cross_val_mse_time = str(timedelta(seconds=time.time() - start_time))
+                cross_val_mse_time = (pd.Timestamp.now() - start_time).total_seconds()
+                cross_val_mse_time = str(timedelta(seconds=cross_val_mse_time))
                 print(
                     f"Calculation of cross validation for mse took {cross_val_mse_time}"
                 )
@@ -351,7 +351,7 @@ def test_models(
                 print(
                     f"Calculation of cross validation for r2 started at {pd.Timestamp.now()}"
                 )
-                start_time = time.time()
+                start_time = pd.Timestamp.now()
                 cv_r2 = cross_val_score(
                     model,
                     x,
@@ -362,7 +362,8 @@ def test_models(
                     # n_jobs=n_jobs,
                     verbose=verbose,
                 )
-                cross_val_r2_time = str(timedelta(seconds=time.time() - start_time))
+                cross_val_r2_time = (pd.Timestamp.now() - start_time).total_seconds()
+                cross_val_r2_time = str(timedelta(seconds=cross_val_r2_time))
                 print(
                     f"Calculation of cross validation for r2 took {cross_val_r2_time}"
                 )
@@ -401,11 +402,12 @@ def test_models(
             results.at[index, "test_success"] = False
         finally:
             test_end = pd.Timestamp.now()
+            test_duration = (test_start - test_end).total_seconds()
 
             results.at[index, "time_test_end"] = test_end
             results.at[index, "time_test_end_pretty"] = str(test_end)
             results.at[index, "time_test_duration"] = str(
-                timedelta(seconds=time.time() - test_start_time)
+                timedelta(seconds=test_duration)
             )
 
             # save test results for each iteration
@@ -433,11 +435,12 @@ def test_models(
 
             logs_buffer.close()
 
-    test_end = time.time()
+    testing_end = pd.Timestamp.now()
 
-    print(
-        f"Test took {time.strftime('%H:%M:%S', time.gmtime(test_end - test_start))} for {len(test_specifications)} tests"
-    )
+    testing_duration = (testing_end - testing_start).total_seconds()
+    testing_duration = str(timedelta(seconds=testing_duration))
+
+    print(f"Test took {testing_duration} for {len(test_specifications)} tests")
 
     return results
 
