@@ -395,8 +395,6 @@ def test_models(
             traceback.print_exc()
 
             results.at[index, "test_success"] = False
-
-            raise e
         finally:
             # save test results for each iteration
             os.makedirs(os.path.dirname(stats_file), exist_ok=True)
