@@ -411,7 +411,9 @@ def test_models(
             sys.stderr = tee_stderr.stderr
 
             # Write logs to a file
-            with open(get_model_logfile_name(test, test_end), "w") as f:
+            logs_file = get_model_logfile_name(test, test_end)
+            with open(logs_file, "w") as f:
+                print(f"Saving logs to {logs_file}")
                 f.write(logs_buffer.getvalue())
 
             logs_buffer.close()
