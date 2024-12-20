@@ -67,6 +67,7 @@ def new_test_specification(model):
         "verbose": 0,  # whether to print verbose output from all functions that accept it, default: 0, no verbose output
         "n_jobs": -1,  # number of jobs to run in parallel, default: -1, use all available processors
         "skip_cross_validation": False,  # whether to skip cross validation and recording these metrics, default: False
+        "skip_fitting": False,  # whether to skip fitting the model and recording these metrics, default: False
     }
 
 
@@ -139,6 +140,7 @@ def set_defaults_where_needed(test_specifications: pd.DataFrame, data: pd.DataFr
     set_defaults_for_column(test_specifications, "verbose", default=0)
     set_defaults_for_column(test_specifications, "n_jobs", default=-1)
     set_defaults_for_column(test_specifications, "skip_cross_validation", default=False)
+    set_defaults_for_column(test_specifications, "skip_fitting", default=False)
 
 
 def get_value(test_specification: pd.Series, column: str):
@@ -218,6 +220,7 @@ def test_models(
             verbose = int(get_value(test, "verbose"))
             n_jobs = int(get_value(test, "n_jobs"))
             skip_cross_validation = get_value(test, "skip_cross_validation")
+            skip_fitting = get_value(test, "skip_fitting")
 
             model = test["model"]
 
@@ -266,12 +269,18 @@ def test_models(
             results.at[index, "time_test_start"] = test_start
             results.at[index, "time_test_start_pretty"] = str(test_start)
 
-            print(
-                f"Fitting model {model} for train size {len(x_test)} (test_size={test_size}) started at {pd.Timestamp.now()}"
-            )
-            start_time = pd.Timestamp.now()
-            model.fit(x_train, y_train)
-            time_fitting = (pd.Timestamp.now() - start_time).total_seconds()
+            if skip_fitting:
+                print(
+                    f"Skipping fitting for model {model} because skip_fitting is set to True"
+                )
+            else:
+                print(
+                    f"Fitting model {model} for train size {len(x_test)} (test_size={test_size}) started at {pd.Timestamp.now()}"
+                )
+                start_time = pd.Timestamp.now()
+                model.fit(x_train, y_train)
+                time_fitting = (pd.Timestamp.now() - start_time).total_seconds()
+                results.at[index, "time_fitting"] = str(timedelta(seconds=time_fitting))
 
             # save the model to a file after fitting
             if save_model:
@@ -288,12 +297,11 @@ def test_models(
             y_test_pred = model.predict(x_test)
             time_pred = (pd.Timestamp.now() - start_time).total_seconds()
 
+            results.at[index, "time_pred"] = str(timedelta(seconds=time_pred))
+
             mse = mean_squared_error(y_test, y_test_pred)
             r2 = r2_score(y_test, y_test_pred)
 
-            # save results
-            results.at[index, "time_fitting"] = str(timedelta(seconds=time_fitting))
-            results.at[index, "time_pred"] = str(timedelta(seconds=time_pred))
             results.at[index, "mse"] = mse
             results.at[index, "r2"] = r2
 
