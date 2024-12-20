@@ -112,8 +112,10 @@ def set_defaults_for_column(
                         "string"
                     )
                 if isinstance(default_value, (bool)):
+                    # setting column type to bool autocasts NaN to True, which breaks this function
+                    # for now, just set to column type object instead
                     test_specifications[column] = test_specifications[column].astype(
-                        "bool"
+                        object
                     )
 
             test_specifications.at[index, column] = default_value
