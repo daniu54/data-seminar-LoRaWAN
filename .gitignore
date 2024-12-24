@@ -166,5 +166,5 @@ Telegram Alerts Bot/.env
 
 
 ModelsPlayground/best_models
-ModelsPlayground/results
 ModelsPlayground/models
+ModelsPlayground/secrets
