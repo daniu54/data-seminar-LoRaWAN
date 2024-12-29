@@ -54,7 +54,7 @@ def load_model(test_specification_row: pd.Series):
 
 def new_test_specification(model):
     """
-    Create a new test specification from a SupportedModels enum value.
+    Create a new test specification with default values.
     """
     return {
         "model": model,  # model object or path string to load a model from
