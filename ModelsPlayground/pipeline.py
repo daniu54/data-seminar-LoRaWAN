@@ -131,6 +131,7 @@ def new_test_specification(model):
         "n_jobs": -1,  # number of jobs to run in parallel, default: -1, use all available processors
         "skip_cross_validation": False,  # whether to skip cross validation and recording these metrics, default: False
         "skip_fitting": False,  # whether to skip fitting the model and recording these metrics, default: False
+        "skip_on_duplicate": False, # whether to skip the test if the test with the same id already exists in results file, default: False
     }
 
 
@@ -204,6 +205,7 @@ def set_defaults_where_needed(test_specifications: pd.DataFrame, data: pd.DataFr
     set_defaults_for_column(test_specifications, "n_jobs", default=-1)
     set_defaults_for_column(test_specifications, "skip_cross_validation", default=False)
     set_defaults_for_column(test_specifications, "skip_fitting", default=False)
+    set_defaults_for_column(test_specifications, "skip_on_duplicate", default=False)
 
 
 def get_value(test_specification: pd.Series, column: str):
@@ -277,18 +279,26 @@ def test_models(
         sys.stdout = tee_stdout
         sys.stderr = tee_stderr
 
-        try:
-            id = get_value(test, "id")
-            test_size = get_value(test, "test_size")
-            features = get_value(test, "features")
-            random_state = get_value(test, "random_state")
-            sample_size = get_value(test, "sample_size")
-            save_model = get_value(test, "save_model")
-            verbose = int(get_value(test, "verbose"))
-            n_jobs = int(get_value(test, "n_jobs"))
-            skip_cross_validation = get_value(test, "skip_cross_validation")
-            skip_fitting = get_value(test, "skip_fitting")
+        id = get_value(test, "id")
+        test_size = get_value(test, "test_size")
+        features = get_value(test, "features")
+        random_state = get_value(test, "random_state")
+        sample_size = get_value(test, "sample_size")
+        save_model = get_value(test, "save_model")
+        verbose = int(get_value(test, "verbose"))
+        n_jobs = int(get_value(test, "n_jobs"))
+        skip_cross_validation = get_value(test, "skip_cross_validation")
+        skip_fitting = get_value(test, "skip_fitting")
+        skip_on_duplicate = get_value(test, "skip_on_duplicate")
 
+        if skip_on_duplicate:
+            model_stats = pd.read_json(stats_file, orient='records', lines=True)
+            ids = model_stats["id"].values
+            if id in ids:
+                print(f"Skipping test with id {id} because skip_on_duplicate is set to True and the test already exists in the results file")
+                continue
+
+        try:
             model = test["model"]
 
             if isinstance(model, str):

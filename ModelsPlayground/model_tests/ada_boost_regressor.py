@@ -10,10 +10,19 @@ from sklearn.neural_network import MLPRegressor
 
 import pandas as pd
 
+# quick-and-dirty import, since I could not get relative imports to work
+import sys
+from pathlib import Path
+root_dir = Path(__file__).resolve().parent.parent
+sys.path.append(str((root_dir).absolute()))
 import pipeline
 
 data_path = pipeline.DEFAULT_DATA_FILE
 data_path = ".." / data_path
+
+stats_file = pipeline.DEFAULT_STATS_FILE
+stats_file = ".." / stats_file
+# stats_file = Path("../results/model_stats copy.json")
 
 data = pipeline.load_data(data_path)
 data = pipeline.clean_data(data)
@@ -32,6 +41,7 @@ ada_boost = AdaBoostRegressor(
     learning_rate=0.6903938978839036
 )
 
+skip_on_duplicate = True
 
 test_specifications = [
     {
@@ -43,7 +53,8 @@ test_specifications = [
         'verbose': 10,
         'n_jobs': -1,
         'save_model': True,
+        'skip_on_duplicate': skip_on_duplicate
     },
 ]
 
-pipeline.test_models(data, test_specifications)
+pipeline.test_models(data, test_specifications, stats_file=stats_file)
