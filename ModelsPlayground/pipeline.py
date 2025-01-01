@@ -20,18 +20,81 @@ import joblib  # for persisting models
 from pathlib import Path
 
 DEFAULT_FEATURES = [
+    # from provided data
     "distance",
-    "c_walls",
     "co2",
     "humidity",
     "pm25",
     "pressure",
     "temperature",
+    "frequency",
     "snr",
+    # "c_walls",
+    # "w_walls",
+
+    # new features, see `add_features`
+    "inverse_distance_squared",
+    "humidity_temperature_product",
 ]
 
 DEFAULT_STATS_FILE = Path("./results/model_stats.json")
 
+DEFAULT_DATA_FILE = Path("aggregated_measurements_data.csv")
+
+def load_data(data_path: Path = DEFAULT_DATA_FILE):
+    """
+    Load data from the file at data_path.
+    """
+
+    print(f"Loading data from {data_path}")
+
+    data = pd.read_csv(data_path, index_col=0)
+
+    return data
+
+def clean_data(data: pd.DataFrame):
+    """
+    Clean the data.
+    """
+
+    print("Cleaning data by removing rows with NaN values")
+    cleaned_data = data.dropna()
+
+    print("Dropped ", len(data) - len(cleaned_data), " rows with NaN values")
+
+    return cleaned_data
+
+def add_features(data: pd.DataFrame):
+    """
+    Add additional features to the data.
+    """
+
+    distance = data["distance"].values
+    humidity = data["humidity"].values
+    temperature = data["temperature"].values
+
+    inverse_distance_squared = 1 / (distance**2 + 1e-10)
+    humidity_temperature_product = humidity * temperature  # Humidity × Temperature
+
+    new_features = pd.DataFrame({
+        "inverse_distance_squared": inverse_distance_squared,
+        "humidity_temperature_product": humidity_temperature_product
+    }, index=data.index)
+
+    enhanced_data = pd.concat([data, new_features], axis=1)
+
+    return enhanced_data
+
+def calculate_correlation(data: pd.DataFrame):
+    """
+    Calculate the correlation matrix for the data.
+    """
+
+    print("Calculating correlation matrix for the data")
+
+    correlation_matrix = data.corr()
+
+    return correlation_matrix["exp_pl"]
 
 def load_model(test_specification_row: pd.Series):
     """
@@ -198,6 +261,10 @@ def test_models(
     results["model_parameters"] = results["model_parameters"].astype(
         object
     )  # need to tell pandas that we will be storing dictionaries here
+    results.insert(5, "unused_features", np.NaN)
+    results["unused_features"] = results["unused_features"].astype(
+        object
+    )  # need to tell pandas that we will be storing dictionaries here
 
     testing_start = pd.Timestamp.now()
 
@@ -268,6 +335,8 @@ def test_models(
 
             results.at[index, "time_test_start"] = test_start
             results.at[index, "time_test_start_pretty"] = str(test_start)
+
+            results.at[index, "unused_features"] = list(set(data.columns) - set(features))
 
             if skip_fitting:
                 print(
