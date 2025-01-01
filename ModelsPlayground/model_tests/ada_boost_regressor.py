@@ -12,7 +12,10 @@ import pandas as pd
 
 import pipeline
 
-data = pipeline.load_data()
+data_path = pipeline.DEFAULT_DATA_FILE
+data_path = ".." / data_path
+
+data = pipeline.load_data(data_path)
 data = pipeline.clean_data(data)
 data = pipeline.add_features(data)
 
