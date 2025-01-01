@@ -271,14 +271,6 @@ def test_models(
     testing_start = pd.Timestamp.now()
 
     for index, test in test_specifications.iterrows():
-        logs_buffer = StringIO()
-        tee_stdout = TeeStdout(logs_buffer)
-        tee_stderr = TeeStderr(logs_buffer)
-
-        # capture output to a file and console
-        sys.stdout = tee_stdout
-        sys.stderr = tee_stderr
-
         id = get_value(test, "id")
         test_size = get_value(test, "test_size")
         features = get_value(test, "features")
@@ -299,6 +291,14 @@ def test_models(
                 continue
 
         try:
+            logs_buffer = StringIO()
+            tee_stdout = TeeStdout(logs_buffer)
+            tee_stderr = TeeStderr(logs_buffer)
+
+            # capture output to a file and console
+            sys.stdout = tee_stdout
+            sys.stderr = tee_stderr
+
             model = test["model"]
 
             if isinstance(model, str):
