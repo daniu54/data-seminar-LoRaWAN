@@ -165,6 +165,6 @@ To Do List and Research Directions.txt
 Telegram Alerts Bot/.env
 
 
-ModelsPlayground/best_models
-ModelsPlayground/models
-ModelsPlayground/secrets
+PredictionPathLossUsingML/best_models
+PredictionPathLossUsingML/models
+PredictionPathLossUsingML/secrets
