@@ -31,7 +31,6 @@ DEFAULT_FEATURES = [
     "snr",
     # "c_walls",
     # "w_walls",
-
     # new features, see `add_features`
     "inverse_distance_squared",
     "humidity_temperature_product",
@@ -40,6 +39,7 @@ DEFAULT_FEATURES = [
 DEFAULT_STATS_FILE = Path("./results/model_stats.json")
 
 DEFAULT_DATA_FILE = Path("aggregated_measurements_data.csv")
+
 
 def load_data(data_path: Path = DEFAULT_DATA_FILE):
     """
@@ -51,6 +51,7 @@ def load_data(data_path: Path = DEFAULT_DATA_FILE):
     data = pd.read_csv(data_path, index_col=0)
 
     return data
+
 
 def clean_data(data: pd.DataFrame):
     """
@@ -64,6 +65,7 @@ def clean_data(data: pd.DataFrame):
 
     return cleaned_data
 
+
 def add_features(data: pd.DataFrame):
     """
     Add additional features to the data.
@@ -76,14 +78,18 @@ def add_features(data: pd.DataFrame):
     inverse_distance_squared = 1 / (distance**2 + 1e-10)
     humidity_temperature_product = humidity * temperature  # Humidity × Temperature
 
-    new_features = pd.DataFrame({
-        "inverse_distance_squared": inverse_distance_squared,
-        "humidity_temperature_product": humidity_temperature_product
-    }, index=data.index)
+    new_features = pd.DataFrame(
+        {
+            "inverse_distance_squared": inverse_distance_squared,
+            "humidity_temperature_product": humidity_temperature_product,
+        },
+        index=data.index,
+    )
 
     enhanced_data = pd.concat([data, new_features], axis=1)
 
     return enhanced_data
+
 
 def calculate_correlation(data: pd.DataFrame):
     """
@@ -95,6 +101,7 @@ def calculate_correlation(data: pd.DataFrame):
     correlation_matrix = data.corr()
 
     return correlation_matrix["exp_pl"]
+
 
 def load_model(test_specification_row: pd.Series):
     """
@@ -131,7 +138,7 @@ def new_test_specification(model):
         "n_jobs": -1,  # number of jobs to run in parallel, default: -1, use all available processors
         "skip_cross_validation": False,  # whether to skip cross validation and recording these metrics, default: False
         "skip_fitting": False,  # whether to skip fitting the model and recording these metrics, default: False
-        "skip_on_duplicate": False, # whether to skip the test if the test with the same id already exists in results file, default: False
+        "skip_on_duplicate": False,  # whether to skip the test if the test with the same id already exists in results file, default: False
     }
 
 
@@ -284,10 +291,12 @@ def test_models(
         skip_on_duplicate = get_value(test, "skip_on_duplicate")
 
         if skip_on_duplicate:
-            model_stats = pd.read_json(stats_file, orient='records', lines=True)
+            model_stats = pd.read_json(stats_file, orient="records", lines=True)
             ids = model_stats["id"].values
             if id in ids:
-                print(f"Skipping test with id {id} because skip_on_duplicate is set to True and the test already exists in the results file")
+                print(
+                    f"Skipping test with id {id} because skip_on_duplicate is set to True and the test already exists in the results file"
+                )
                 continue
 
         try:
@@ -346,7 +355,9 @@ def test_models(
             results.at[index, "time_test_start"] = test_start
             results.at[index, "time_test_start_pretty"] = str(test_start)
 
-            results.at[index, "unused_features"] = list(set(data.columns) - set(features))
+            results.at[index, "unused_features"] = list(
+                set(data.columns) - set(features)
+            )
 
             if skip_fitting:
                 print(
