@@ -58,13 +58,12 @@ gradient_boosting_regressor = GradientBoostingRegressor(
 
 skip_on_duplicate = True
 save_model = True
-features = pipeline.DEFAULT_FEATURES
 
+# TODO fix features specification
 test_specifications = [
     {
         "id": f"ada_boost_{1}",
         "model": ada_boost,
-        "features": features,
         "verbose": 10,
         "n_jobs": -1,
         "save_model": save_model,
@@ -73,7 +72,6 @@ test_specifications = [
     {
         "id": f"xg_boost_{1}",
         "model": xg_boost,
-        "features": features,
         "verbose": 10,
         "n_jobs": -1,
         "save_model": save_model,
@@ -82,7 +80,6 @@ test_specifications = [
     {
         "id": f"gradient_boosting_regressor_{1}",
         "model": gradient_boosting_regressor,
-        "features": features,
         "verbose": 10,
         "n_jobs": -1,
         "save_model": save_model,
