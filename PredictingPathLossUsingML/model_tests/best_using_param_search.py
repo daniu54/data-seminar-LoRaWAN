@@ -2,13 +2,13 @@ import numpy as np
 import os
 import uuid
 
+import sys
+from pathlib import Path
+
 # models
 import pandas as pd
 
 # quick-and-dirty import, since I could not get relative imports to work
-import sys
-from pathlib import Path
-
 root_dir = Path(__file__).resolve().parent.parent
 sys.path.append(str((root_dir).absolute()))
 import pipeline
