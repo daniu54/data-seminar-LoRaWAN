@@ -168,3 +168,4 @@ Telegram Alerts Bot/.env
 PredictingPathLossUsingML/best_models
 PredictingPathLossUsingML/models
 PredictingPathLossUsingML/secrets
+PredictingPathLossUsingML/model_tests/models
