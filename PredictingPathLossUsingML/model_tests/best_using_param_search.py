@@ -26,8 +26,13 @@ data = pipeline.add_features(data)
 print(data.columns)
 print(pipeline.calculate_correlation(data))
 
-from sklearn.ensemble import AdaBoostRegressor
 from sklearn.tree import DecisionTreeRegressor
+
+decision_tree_regressor = DecisionTreeRegressor(
+    max_depth=19, min_samples_split=14, min_samples_leaf=16, max_features=None
+)
+
+from sklearn.ensemble import AdaBoostRegressor
 
 ada_boost = AdaBoostRegressor(
     estimator=DecisionTreeRegressor(max_depth=14),
@@ -56,6 +61,20 @@ gradient_boosting_regressor = GradientBoostingRegressor(
     n_estimators=500, learning_rate=0.05, max_depth=3, random_state=42
 )
 
+gradient_boosting_regressor2 = GradientBoostingRegressor(
+    n_estimators=598,
+    max_depth=25,
+    learning_rate=0.011764549917588032,
+    min_samples_split=2,
+    min_samples_leaf=3,
+    subsample=0.8390495914775882,
+    max_features="log2",
+)
+
+from sklearn.neighbors import KNeighborsRegressor
+
+k_neighbors_regressor = KNeighborsRegressor(n_neighbors=3, weights="distance", p=2)
+
 skip_on_duplicate = True
 save_model = True
 
@@ -80,6 +99,30 @@ test_specifications = [
     {
         "id": f"gradient_boosting_regressor_{1}",
         "model": gradient_boosting_regressor,
+        "verbose": 10,
+        "n_jobs": -1,
+        "save_model": save_model,
+        "skip_on_duplicate": skip_on_duplicate,
+    },
+    {
+        "id": f"gradient_boosting_regressor_{2}",
+        "model": gradient_boosting_regressor2,
+        "verbose": 10,
+        "n_jobs": -1,
+        "save_model": save_model,
+        "skip_on_duplicate": skip_on_duplicate,
+    },
+    {
+        "id": f"decision_tree_regressor_{1}",
+        "model": decision_tree_regressor,
+        "verbose": 10,
+        "n_jobs": -1,
+        "save_model": save_model,
+        "skip_on_duplicate": skip_on_duplicate,
+    },
+    {
+        "id": f"k_neighbors_regressor_{1}",
+        "model": k_neighbors_regressor,
         "verbose": 10,
         "n_jobs": -1,
         "save_model": save_model,
